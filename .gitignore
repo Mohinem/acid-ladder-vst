@@ -1,0 +1,66 @@
+# =========================
+# Build artifacts
+# =========================
+build/
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+Makefile
+compile_commands.json
+install_manifest.txt
+
+# =========================
+# JUCE / plugin artifacts
+# =========================
+*_artefacts/
+*.vst3
+*.component
+*.dll
+*.so
+*.dylib
+*.exe
+
+# =========================
+# Generated JUCE files
+# =========================
+JuceHeader.h
+BinaryData.h
+BinaryData.cpp
+
+# =========================
+# IDE / Editor files
+# =========================
+.vscode/
+.idea/
+*.user
+*.suo
+*.VC.db
+*.VC.opendb
+
+# =========================
+# OS junk
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# Logs & temp
+# =========================
+*.log
+*.tmp
+*.swp
+*.swo
+
+# =========================
+# Python / Conda (you use this)
+# =========================
+__pycache__/
+*.pyc
+.conda/
+.env/
+
+# =========================
+# Optional: local JUCE builds
+# (DO NOT ignore juce/JUCE itself)
+# =========================
+juce/JUCE/build/
