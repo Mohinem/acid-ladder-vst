@@ -1,106 +1,283 @@
+// src/plugin/PluginEditor.cpp
 #include "PluginEditor.h"
 
-AcidSynthAudioProcessorEditor::AcidSynthAudioProcessorEditor (AcidSynthAudioProcessor& p)
-: AudioProcessorEditor (&p), audioProcessor (p)
-{
-    auto& apvts = audioProcessor.apvts;
-
-    setupKnob (wave,   waveL,   "Wave");
-    setupKnob (cutoff, cutoffL, "Cutoff");
-    setupKnob (res,    resL,    "Res");
-    setupKnob (envmod, envmodL, "Env");
-    setupKnob (decay,  decayL,  "Decay");
-    setupKnob (accent, accentL, "Accent");
-    setupKnob (glide,  glideL,  "Glide");
-    setupKnob (drive,  driveL,  "Drive");
-    setupKnob (gain,   gainL,   "Gain");
-
-    waveA   = std::make_unique<SliderAttachment> (apvts, "wave",   wave);
-    cutoffA = std::make_unique<SliderAttachment> (apvts, "cutoff", cutoff);
-    resA    = std::make_unique<SliderAttachment> (apvts, "res",    res);
-    envmodA = std::make_unique<SliderAttachment> (apvts, "envmod", envmod);
-    decayA  = std::make_unique<SliderAttachment> (apvts, "decay",  decay);
-    accentA = std::make_unique<SliderAttachment> (apvts, "accent", accent);
-    glideA  = std::make_unique<SliderAttachment> (apvts, "glide",  glide);
-    driveA  = std::make_unique<SliderAttachment> (apvts, "drive",  drive);
-    gainA   = std::make_unique<SliderAttachment> (apvts, "gain",   gain);
-
-    setSize (560, 260);
-}
-
-void AcidSynthAudioProcessorEditor::setupKnob (juce::Slider& s, juce::Label& l, const juce::String& name)
+//==============================================================================
+// Knob styling (minimal but more "pro" feeling)
+void AcidSynthAudioProcessorEditor::setupKnob (juce::Slider& s)
 {
     s.setSliderStyle (juce::Slider::RotaryHorizontalVerticalDrag);
-    s.setTextBoxStyle (juce::Slider::TextBoxBelow, false, 70, 18);
 
-    l.setText (name, juce::dontSendNotification);
+    // Remove the clunky numeric boxes (prototype look)
+    s.setTextBoxStyle (juce::Slider::NoTextBox, false, 0, 0);
+
+    // Better feel: velocity mode makes rotary control smoother/more "plugin-like"
+    s.setVelocityBasedMode (true);
+    s.setVelocityModeParameters (0.9, 1, 0.05, true);
+
+    // Mouse wheel tweaks
+    s.setScrollWheelEnabled (true);
+}
+
+//==============================================================================
+// Label styling
+void AcidSynthAudioProcessorEditor::setupLabel (juce::Label& l, const juce::String& text)
+{
+    l.setText (text, juce::dontSendNotification);
     l.setJustificationType (juce::Justification::centred);
-
-    addAndMakeVisible (s);
+    l.setFont (juce::Font (12.0f).withStyle (juce::Font::bold));
+    l.setColour (juce::Label::textColourId, juce::Colours::white.withAlpha (0.90f));
+    l.setInterceptsMouseClicks (false, false);
     addAndMakeVisible (l);
 }
 
+//==============================================================================
+// Readout formatting
+void AcidSynthAudioProcessorEditor::updateReadout (const juce::String& name, const juce::Slider& s)
+{
+    juce::String value;
+    const auto v = s.getValue();
+
+    if (std::abs (v) >= 1000.0)
+        value = juce::String (v, 1);
+    else if (std::abs (v) >= 100.0)
+        value = juce::String (v, 1);
+    else
+        value = juce::String (v, 3);
+
+    readoutLabel.setText (name + ": " + value, juce::dontSendNotification);
+}
+
+//==============================================================================
+// Connect slider interactions to top readout
+void AcidSynthAudioProcessorEditor::wireReadout (juce::Slider& s, const juce::String& name)
+{
+    s.setTooltip (name);
+
+    s.onDragStart = [this, &s, name]
+    {
+        updateReadout (name, s);
+    };
+
+    s.onValueChange = [this, &s, name]
+    {
+        updateReadout (name, s);
+    };
+}
+
+//==============================================================================
+// ctor
+AcidSynthAudioProcessorEditor::AcidSynthAudioProcessorEditor (AcidSynthAudioProcessor& p)
+    : juce::AudioProcessorEditor (&p)
+    , processor (p)
+    , keyboard (processor.keyboardState, juce::MidiKeyboardComponent::horizontalKeyboard)
+{
+    // --- Sliders
+    setupKnob (wave);
+    setupKnob (cutoff);
+    setupKnob (res);
+    setupKnob (envmod);
+    setupKnob (decay);
+    setupKnob (accent);
+    setupKnob (glide);
+    setupKnob (drive);
+    setupKnob (gain);
+
+    addAndMakeVisible (wave);
+    addAndMakeVisible (cutoff);
+    addAndMakeVisible (res);
+    addAndMakeVisible (envmod);
+    addAndMakeVisible (decay);
+    addAndMakeVisible (accent);
+    addAndMakeVisible (glide);
+    addAndMakeVisible (drive);
+    addAndMakeVisible (gain);
+
+    // --- Keyboard
+    addAndMakeVisible (keyboard);
+
+    // --- Top bar labels
+    titleLabel.setText ("Acid Ladder VST", juce::dontSendNotification);
+    titleLabel.setJustificationType (juce::Justification::centredLeft);
+    titleLabel.setFont (juce::Font (15.0f).withStyle (juce::Font::bold));
+    titleLabel.setColour (juce::Label::textColourId, juce::Colours::white.withAlpha (0.95f));
+    titleLabel.setInterceptsMouseClicks (false, false);
+    addAndMakeVisible (titleLabel);
+
+    readoutLabel.setText ("", juce::dontSendNotification);
+    readoutLabel.setJustificationType (juce::Justification::centredRight);
+    readoutLabel.setFont (juce::Font (13.0f).withStyle (juce::Font::plain));
+    readoutLabel.setColour (juce::Label::textColourId, juce::Colours::white.withAlpha (0.85f));
+    readoutLabel.setInterceptsMouseClicks (false, false);
+    addAndMakeVisible (readoutLabel);
+
+    // --- Group headers
+    groupLeft.setText ("OSC", juce::dontSendNotification);
+    groupMid.setText  ("FILTER", juce::dontSendNotification);
+    groupRight.setText("AMP", juce::dontSendNotification);
+
+    for (auto* gl : { &groupLeft, &groupMid, &groupRight })
+    {
+        gl->setJustificationType (juce::Justification::centred);
+        gl->setFont (juce::Font (11.0f).withStyle (juce::Font::bold));
+        gl->setColour (juce::Label::textColourId, juce::Colours::white.withAlpha (0.55f));
+        gl->setInterceptsMouseClicks (false, false);
+        addAndMakeVisible (*gl);
+    }
+
+    // --- Knob labels
+    setupLabel (waveLabel,   "WAVE");
+    setupLabel (cutoffLabel, "CUTOFF");
+    setupLabel (resLabel,    "RES");
+
+    setupLabel (envmodLabel, "ENVMOD");
+    setupLabel (decayLabel,  "DECAY");
+    setupLabel (accentLabel, "ACCENT");
+
+    setupLabel (glideLabel,  "GLIDE");
+    setupLabel (driveLabel,  "DRIVE");
+    setupLabel (gainLabel,   "GAIN");
+
+    // --- Attachments (unchanged)
+    auto& apvts = processor.apvts;
+    aWave   = std::make_unique<Attachment> (apvts, "wave",   wave);
+    aCutoff = std::make_unique<Attachment> (apvts, "cutoff", cutoff);
+    aRes    = std::make_unique<Attachment> (apvts, "res",    res);
+    aEnvmod = std::make_unique<Attachment> (apvts, "envmod", envmod);
+    aDecay  = std::make_unique<Attachment> (apvts, "decay",  decay);
+    aAccent = std::make_unique<Attachment> (apvts, "accent", accent);
+    aGlide  = std::make_unique<Attachment> (apvts, "glide",  glide);
+    aDrive  = std::make_unique<Attachment> (apvts, "drive",  drive);
+    aGain   = std::make_unique<Attachment> (apvts, "gain",   gain);
+
+    // --- Double-click reset
+    for (auto* s : { &wave, &cutoff, &res, &envmod, &decay, &accent, &glide, &drive, &gain })
+        s->setDoubleClickReturnValue (true, s->getValue());
+
+    // --- Readout wiring
+    wireReadout (wave,   "WAVE");
+    wireReadout (cutoff, "CUTOFF");
+    wireReadout (res,    "RES");
+    wireReadout (envmod, "ENVMOD");
+    wireReadout (decay,  "DECAY");
+    wireReadout (accent, "ACCENT");
+    wireReadout (glide,  "GLIDE");
+    wireReadout (drive,  "DRIVE");
+    wireReadout (gain,   "GAIN");
+
+    updateReadout ("CUTOFF", cutoff);
+
+    setSize (760, 420);
+}
+
+//==============================================================================
+// Paint: structured panels + subtle separators
 void AcidSynthAudioProcessorEditor::paint (juce::Graphics& g)
 {
     g.fillAll (juce::Colours::black);
-    g.setColour (juce::Colours::white);
-    g.setFont (16.0f);
-    g.drawText ("Acid Synth (Ladder + Accent + Slide)", 10, 10, getWidth()-20, 20, juce::Justification::centredLeft);
 
-    g.setColour (juce::Colours::darkgrey);
-    g.drawRect (getLocalBounds().reduced (6));
+    auto bounds = getLocalBounds();
+
+    // Top bar background
+    auto topBar = bounds.removeFromTop (36);
+    g.setColour (juce::Colours::white.withAlpha (0.06f));
+    g.fillRect (topBar);
+
+    // Divider line
+    g.setColour (juce::Colours::white.withAlpha (0.12f));
+    g.drawLine (0.0f, (float) topBar.getBottom(), (float) getWidth(), (float) topBar.getBottom(), 1.0f);
+
+    // Knob panel background
+    auto content = bounds.reduced (10);
+    auto keyboardStrip = content.removeFromBottom (100);
+
+    auto knobPanel = content;
+    g.setColour (juce::Colours::white.withAlpha (0.05f));
+    g.fillRoundedRectangle (knobPanel.toFloat(), 10.0f);
+
+    g.setColour (juce::Colours::white.withAlpha (0.10f));
+    g.drawRoundedRectangle (knobPanel.toFloat(), 10.0f, 1.0f);
+
+    // Keyboard strip divider
+    g.setColour (juce::Colours::white.withAlpha (0.12f));
+    g.drawLine ((float) keyboardStrip.getX(),
+                (float) keyboardStrip.getY(),
+                (float) keyboardStrip.getRight(),
+                (float) keyboardStrip.getY(),
+                1.0f);
 }
 
+//==============================================================================
+// Layout: consistent spacing, reserved label space, clean grid
 void AcidSynthAudioProcessorEditor::resized()
 {
-    const int pad = 14;
-    const int knobW = 92;
-    const int knobH = 92;
+    auto area = getLocalBounds();
 
-    auto r = getLocalBounds().reduced (pad);
-    r.removeFromTop (28);
+    // Top bar
+    auto topBar = area.removeFromTop (36);
+    titleLabel.setBounds (topBar.reduced (10, 0).removeFromLeft (300));
+    readoutLabel.setBounds (topBar.reduced (10, 0));
 
-    auto row1 = r.removeFromTop (knobH + 28);
-    auto row2 = r.removeFromTop (knobH + 28);
+    // Main content
+    auto content = area.reduced (10);
 
-    auto place = [&] (juce::Slider& s, juce::Label& l, juce::Rectangle<int> area)
+    // Keyboard strip
+    auto keyboardArea = content.removeFromBottom (100);
+    keyboard.setBounds (keyboardArea.reduced (0, 8));
+
+    // Knob panel area
+    auto gridArea = content;
+
+    // Inner padding for the panel
+    gridArea = gridArea.reduced (18, 14);
+
+    // Reserve header strip above the 3 columns for group labels
+    auto groupHeader = gridArea.removeFromTop (16);
+
+    // 3 columns
+    const int cols = 3;
+    const int rows = 3;
+
+    const int cellW = gridArea.getWidth() / cols;
+    const int cellH = gridArea.getHeight() / rows;
+
+    auto cellRect = [&](int col, int row)
     {
-        l.setBounds (area.removeFromTop (18));
-        s.setBounds (area);
+        return juce::Rectangle<int> (gridArea.getX() + col * cellW,
+                                     gridArea.getY() + row * cellH,
+                                     cellW, cellH).reduced (10, 8);
     };
 
-    auto c1 = row1.removeFromLeft (knobW);
-    place (wave, waveL, c1);
-    row1.removeFromLeft (pad);
+    // Group header labels aligned with columns
+    groupLeft .setBounds (juce::Rectangle<int> (groupHeader.getX() + 0 * (gridArea.getWidth() / 3), groupHeader.getY(),
+                                               gridArea.getWidth() / 3, groupHeader.getHeight()));
+    groupMid  .setBounds (juce::Rectangle<int> (groupHeader.getX() + 1 * (gridArea.getWidth() / 3), groupHeader.getY(),
+                                               gridArea.getWidth() / 3, groupHeader.getHeight()));
+    groupRight.setBounds (juce::Rectangle<int> (groupHeader.getX() + 2 * (gridArea.getWidth() / 3), groupHeader.getY(),
+                                               gridArea.getWidth() / 3, groupHeader.getHeight()));
 
-    auto c2 = row1.removeFromLeft (knobW);
-    place (cutoff, cutoffL, c2);
-    row1.removeFromLeft (pad);
+    // Helper: place a label + knob inside a cell
+    auto place = [&](juce::Label& lbl, juce::Slider& s, int col, int row)
+    {
+        auto cell = cellRect (col, row);
 
-    auto c3 = row1.removeFromLeft (knobW);
-    place (res, resL, c3);
-    row1.removeFromLeft (pad);
+        // label strip
+        auto labelArea = cell.removeFromTop (16);
+        lbl.setBounds (labelArea);
 
-    auto c4 = row1.removeFromLeft (knobW);
-    place (envmod, envmodL, c4);
-    row1.removeFromLeft (pad);
+        // knob gets the rest
+        s.setBounds (cell);
+    };
 
-    auto c5 = row1.removeFromLeft (knobW);
-    place (decay, decayL, c5);
+    // 3x3 placements
+    place (waveLabel,   wave,   0, 0);
+    place (cutoffLabel, cutoff, 1, 0);
+    place (resLabel,    res,    2, 0);
 
-    // row 2
-    auto d1 = row2.removeFromLeft (knobW);
-    place (accent, accentL, d1);
-    row2.removeFromLeft (pad);
+    place (envmodLabel, envmod, 0, 1);
+    place (decayLabel,  decay,  1, 1);
+    place (accentLabel, accent, 2, 1);
 
-    auto d2 = row2.removeFromLeft (knobW);
-    place (glide, glideL, d2);
-    row2.removeFromLeft (pad);
-
-    auto d3 = row2.removeFromLeft (knobW);
-    place (drive, driveL, d3);
-    row2.removeFromLeft (pad);
-
-    auto d4 = row2.removeFromLeft (knobW);
-    place (gain, gainL, d4);
+    place (glideLabel,  glide,  0, 2);
+    place (driveLabel,  drive,  1, 2);
+    place (gainLabel,   gain,   2, 2);
 }

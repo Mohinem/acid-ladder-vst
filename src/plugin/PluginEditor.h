@@ -2,7 +2,7 @@
 #include <JuceHeader.h>
 #include "PluginProcessor.h"
 
-class AcidSynthAudioProcessorEditor  : public juce::AudioProcessorEditor
+class AcidSynthAudioProcessorEditor : public juce::AudioProcessorEditor
 {
 public:
     explicit AcidSynthAudioProcessorEditor (AcidSynthAudioProcessor&);
@@ -12,16 +12,32 @@ public:
     void resized() override;
 
 private:
-    AcidSynthAudioProcessor& audioProcessor;
+    AcidSynthAudioProcessor& processor;
 
-    using SliderAttachment = juce::AudioProcessorValueTreeState::SliderAttachment;
+    // On-screen keyboard UI
+    juce::MidiKeyboardComponent keyboard;
 
+    // Sliders
     juce::Slider wave, cutoff, res, envmod, decay, accent, glide, drive, gain;
-    juce::Label  waveL, cutoffL, resL, envmodL, decayL, accentL, glideL, driveL, gainL;
 
-    std::unique_ptr<SliderAttachment> waveA, cutoffA, resA, envmodA, decayA, accentA, glideA, driveA, gainA;
+    // Labels (real components, not painted text)
+    juce::Label waveLabel, cutoffLabel, resLabel, envmodLabel, decayLabel, accentLabel, glideLabel, driveLabel, gainLabel;
 
-    void setupKnob (juce::Slider& s, juce::Label& l, const juce::String& name);
+    // Top bar text
+    juce::Label titleLabel;
+    juce::Label readoutLabel;
+
+    // Optional group headers (small polish)
+    juce::Label groupLeft, groupMid, groupRight;
+
+    using Attachment = juce::AudioProcessorValueTreeState::SliderAttachment;
+    std::unique_ptr<Attachment> aWave, aCutoff, aRes, aEnvmod, aDecay, aAccent, aGlide, aDrive, aGain;
+
+    // Internal helpers
+    static void setupKnob (juce::Slider& s);
+    void setupLabel (juce::Label& l, const juce::String& text);
+    void wireReadout (juce::Slider& s, const juce::String& name);
+    void updateReadout (const juce::String& name, const juce::Slider& s);
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AcidSynthAudioProcessorEditor)
 };

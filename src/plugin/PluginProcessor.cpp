@@ -3,14 +3,20 @@
 
 static float getParam (juce::AudioProcessorValueTreeState& apvts, const char* id)
 {
-    return apvts.getRawParameterValue (id)->load();
+    if (auto* v = apvts.getRawParameterValue (id))
+        return v->load();
+
+    jassertfalse; // param id typo
+    return 0.0f;
 }
 
 AcidSynthAudioProcessor::AcidSynthAudioProcessor()
-: AudioProcessor (BusesProperties().withOutput ("Output", juce::AudioChannelSet::stereo(), true))
-, apvts (*this, nullptr, "PARAMS", createParams())
+    : juce::AudioProcessor (BusesProperties().withOutput ("Output", juce::AudioChannelSet::stereo(), true))
+    , apvts (*this, nullptr, "PARAMS", createParams())
 {
 }
+
+AcidSynthAudioProcessor::~AcidSynthAudioProcessor() = default;
 
 juce::AudioProcessorValueTreeState::ParameterLayout AcidSynthAudioProcessor::createParams()
 {
@@ -18,22 +24,38 @@ juce::AudioProcessorValueTreeState::ParameterLayout AcidSynthAudioProcessor::cre
 
     std::vector<std::unique_ptr<RangedAudioParameter>> p;
 
-    p.push_back (std::make_unique<AudioParameterFloat> ("wave", "Wave", NormalisableRange<float>(0.0f, 1.0f, 0.001f), 0.0f));
-    p.push_back (std::make_unique<AudioParameterFloat> ("cutoff", "Cutoff", NormalisableRange<float>(20.0f, 18000.0f, 0.0f, 0.35f), 800.0f));
-    p.push_back (std::make_unique<AudioParameterFloat> ("res", "Resonance", NormalisableRange<float>(0.0f, 0.995f, 0.0001f), 0.35f));
-    p.push_back (std::make_unique<AudioParameterFloat> ("envmod", "Env Mod", NormalisableRange<float>(0.0f, 1.0f, 0.001f), 0.75f));
-    p.push_back (std::make_unique<AudioParameterFloat> ("decay", "Decay", NormalisableRange<float>(0.01f, 2.0f, 0.001f, 0.4f), 0.18f));
-    p.push_back (std::make_unique<AudioParameterFloat> ("accent", "Accent", NormalisableRange<float>(0.0f, 1.0f, 0.001f), 0.75f));
-    p.push_back (std::make_unique<AudioParameterFloat> ("glide", "Glide(ms)", NormalisableRange<float>(0.0f, 500.0f, 0.1f, 0.5f), 80.0f));
-    p.push_back (std::make_unique<AudioParameterFloat> ("drive", "Drive", NormalisableRange<float>(0.0f, 1.0f, 0.001f), 0.35f));
-    p.push_back (std::make_unique<AudioParameterFloat> ("gain", "Gain", NormalisableRange<float>(0.0f, 1.5f, 0.001f), 0.85f));
+    p.push_back (std::make_unique<AudioParameterFloat> ("wave",   "Wave",
+                                                        NormalisableRange<float>(0.0f, 1.0f, 0.001f), 0.0f));
+
+    p.push_back (std::make_unique<AudioParameterFloat> ("cutoff", "Cutoff",
+                                                        NormalisableRange<float>(20.0f, 18000.0f, 0.0f, 0.35f), 800.0f));
+
+    p.push_back (std::make_unique<AudioParameterFloat> ("res",    "Resonance",
+                                                        NormalisableRange<float>(0.0f, 0.995f, 0.0001f), 0.35f));
+
+    p.push_back (std::make_unique<AudioParameterFloat> ("envmod", "Env Mod",
+                                                        NormalisableRange<float>(0.0f, 1.0f, 0.001f), 0.75f));
+
+    p.push_back (std::make_unique<AudioParameterFloat> ("decay",  "Decay",
+                                                        NormalisableRange<float>(0.01f, 2.0f, 0.001f, 0.4f), 0.18f));
+
+    p.push_back (std::make_unique<AudioParameterFloat> ("accent", "Accent",
+                                                        NormalisableRange<float>(0.0f, 1.0f, 0.001f), 0.75f));
+
+    p.push_back (std::make_unique<AudioParameterFloat> ("glide",  "Glide(ms)",
+                                                        NormalisableRange<float>(0.0f, 500.0f, 0.1f, 0.5f), 80.0f));
+
+    p.push_back (std::make_unique<AudioParameterFloat> ("drive",  "Drive",
+                                                        NormalisableRange<float>(0.0f, 1.0f, 0.001f), 0.35f));
+
+    p.push_back (std::make_unique<AudioParameterFloat> ("gain",   "Gain",
+                                                        NormalisableRange<float>(0.0f, 1.5f, 0.001f), 0.85f));
 
     return { p.begin(), p.end() };
 }
 
 bool AcidSynthAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
 {
-    // allow mono/stereo output
     const auto& out = layouts.getMainOutputChannelSet();
     return (out == juce::AudioChannelSet::mono() || out == juce::AudioChannelSet::stereo());
 }
@@ -43,11 +65,17 @@ void AcidSynthAudioProcessor::prepareToPlay (double sampleRate, int /*samplesPer
     voice.prepare (sampleRate);
 }
 
+void AcidSynthAudioProcessor::releaseResources()
+{
+}
+
 void AcidSynthAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midi)
 {
     juce::ScopedNoDenormals noDenormals;
-
     buffer.clear();
+
+    // ✅ THIS is the critical line that makes the on-screen keyboard generate MIDI:
+    keyboardState.processNextMidiBuffer (midi, 0, buffer.getNumSamples(), true);
 
     // parameters
     const float wave   = getParam (apvts, "wave");
@@ -81,10 +109,14 @@ void AcidSynthAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, ju
     for (int i = 0; i < numSamples; ++i)
     {
         const float s = voice.render();
-
         for (int ch = 0; ch < numCh; ++ch)
             buffer.setSample (ch, i, s);
     }
+}
+
+bool AcidSynthAudioProcessor::hasEditor() const
+{
+    return true;
 }
 
 juce::AudioProcessorEditor* AcidSynthAudioProcessor::createEditor()
@@ -106,7 +138,6 @@ void AcidSynthAudioProcessor::setStateInformation (const void* data, int sizeInB
         apvts.replaceState (juce::ValueTree::fromXml (*xml));
 }
 
-//==============================================================================
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {
     return new AcidSynthAudioProcessor();
