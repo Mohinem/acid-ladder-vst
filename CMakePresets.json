@@ -1,0 +1,34 @@
+{
+    "version": 3,
+    "cmakeMinimumRequired": {
+      "major": 3,
+      "minor": 19,
+      "patch": 0
+    },
+    "configurePresets": [
+      {
+        "name": "linux-release",
+        "displayName": "Linux Release",
+        "generator": "Unix Makefiles",
+        "binaryDir": "${sourceDir}/build-linux",
+        "cacheVariables": {
+          "CMAKE_BUILD_TYPE": "Release"
+        }
+      },
+      {
+        "name": "windows-release",
+        "displayName": "Windows Release (MinGW)",
+        "generator": "Unix Makefiles",
+        "binaryDir": "${sourceDir}/build-win",
+        "toolchainFile": "${sourceDir}/cmake/toolchains/mingw64.cmake",
+        "cacheVariables": {
+          "CMAKE_BUILD_TYPE": "Release"
+        }
+      }
+    ],
+    "buildPresets": [
+      { "name": "linux", "configurePreset": "linux-release" },
+      { "name": "windows", "configurePreset": "windows-release" }
+    ]
+  }
+  

@@ -1,7 +1,9 @@
 # =========================
-# Build artifacts
+# Build directories
 # =========================
 build/
+build-linux/
+build-win/
 cmake-build-*/
 CMakeFiles/
 CMakeCache.txt
@@ -10,7 +12,7 @@ compile_commands.json
 install_manifest.txt
 
 # =========================
-# JUCE / plugin artifacts
+# JUCE / plugin build artefacts
 # =========================
 *_artefacts/
 *.vst3
@@ -19,6 +21,9 @@ install_manifest.txt
 *.so
 *.dylib
 *.exe
+*.exp
+*.lib
+*.pdb
 
 # =========================
 # Generated JUCE files
@@ -26,6 +31,12 @@ install_manifest.txt
 JuceHeader.h
 BinaryData.h
 BinaryData.cpp
+
+# =========================
+# CMake Preset build folders
+# =========================
+out/
+.cache/
 
 # =========================
 # IDE / Editor files
@@ -36,31 +47,42 @@ BinaryData.cpp
 *.suo
 *.VC.db
 *.VC.opendb
+*.VC.VC.opendb
 
 # =========================
 # OS junk
 # =========================
 .DS_Store
 Thumbs.db
+desktop.ini
 
 # =========================
-# Logs & temp
+# Logs & temp files
 # =========================
 *.log
 *.tmp
 *.swp
 *.swo
+*.bak
 
 # =========================
-# Python / Conda (you use this)
+# Python / Conda (local only)
 # =========================
 __pycache__/
 *.pyc
 .conda/
 .env/
+.env.*
+
+# =========================
+# Wine / runtime junk (LOCAL ONLY)
+# =========================
+*.winedump
+*.wine-log
+wine-debug.log
 
 # =========================
 # Optional: local JUCE builds
-# (DO NOT ignore juce/JUCE itself)
+# (IMPORTANT: DO NOT ignore juce/JUCE itself)
 # =========================
 juce/JUCE/build/
