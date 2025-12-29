@@ -19,6 +19,7 @@ Oscillator → Ladder Filter → Saturation → Output
 - JUCE 7+
 - VST3
 - CMake or ProJucer
+- Optional VST2: set `ACID_LADDER_ENABLE_VST2=ON` and provide the VST2 SDK path via `ACID_LADDER_VST2_SDK_PATH` (or `VST2_SDK_PATH` env var).
 
 ## Disclaimer
 This is an original implementation for educational and research purposes.
