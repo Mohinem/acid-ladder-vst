@@ -85,13 +85,23 @@ jobs:
             Copy-Item -Recurse -Force -Path $d.FullName -Destination "artifacts/windows/"
           }
 
-          # (Optional) sanity check: ensure DLL exists inside the bundle
-          $dlls = Get-ChildItem -Path "artifacts/windows" -Recurse -File -Filter *.dll
-          if (-not $dlls -or $dlls.Count -eq 0) {
-            Write-Error "Packaged artifact contains no .dll files. Bundles may be incomplete."
+          # ✅ Correct sanity check for VST3 on Windows:
+          # The module is typically *.vst3 (a DLL with .vst3 extension) inside Contents\x86_64-win\
+          $modules = Get-ChildItem -Path "artifacts/windows" -Recurse -File |
+            Where-Object {
+              $_.FullName -match "\\Contents\\x86_64-win\\" -and
+              ( $_.Extension -ieq ".vst3" -or $_.Extension -ieq ".dll" )
+            }
+
+          if (-not $modules -or $modules.Count -eq 0) {
+            Write-Error "Packaged artifact contains no VST3 module (.vst3/.dll) under Contents\\x86_64-win\\. Bundles may be incomplete."
+          } else {
+            Write-Host "Found VST3 module(s):"
+            $modules | ForEach-Object { Write-Host " - $($_.FullName)" }
           }
 
           Compress-Archive -Path artifacts/windows -DestinationPath artifacts/windows-vst3.zip -Force
+
 
       - name: Upload artifact (Windows)
         uses: actions/upload-artifact@v4
