@@ -6,9 +6,27 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
+option(ACID_LADDER_ENABLE_VST2 "Build VST2 format (requires VST2 SDK)" OFF)
+set(ACID_LADDER_VST2_SDK_PATH "" CACHE PATH "Path to the VST2 SDK (set when ACID_LADDER_ENABLE_VST2=ON)")
+
 # ---- JUCE ----
 # Expect JUCE repo at: juce/JUCE (must contain CMakeLists.txt)
 add_subdirectory(juce/JUCE)
+
+# ---- Plugin formats ----
+set(ACID_LADDER_PLUGIN_FORMATS VST3)
+if (ACID_LADDER_ENABLE_VST2)
+    if (ACID_LADDER_VST2_SDK_PATH STREQUAL "" AND DEFINED ENV{VST2_SDK_PATH})
+        set(ACID_LADDER_VST2_SDK_PATH "$ENV{VST2_SDK_PATH}" CACHE PATH "Path to the VST2 SDK (set from VST2_SDK_PATH env var)" FORCE)
+    endif()
+
+    if (ACID_LADDER_VST2_SDK_PATH STREQUAL "")
+        message(FATAL_ERROR "ACID_LADDER_ENABLE_VST2=ON requires ACID_LADDER_VST2_SDK_PATH or VST2_SDK_PATH environment variable.")
+    endif()
+
+    juce_set_vst2_sdk_path("${ACID_LADDER_VST2_SDK_PATH}")
+    list(APPEND ACID_LADDER_PLUGIN_FORMATS VST2)
+endif()
 
 # ---- Plugin Target ----
 juce_add_plugin(AcidLadderVST
@@ -25,7 +43,7 @@ juce_add_plugin(AcidLadderVST
     PLUGIN_MANUFACTURER_CODE MOHN
     PLUGIN_CODE ACID
 
-    FORMATS VST3
+    FORMATS ${ACID_LADDER_PLUGIN_FORMATS}
 )
 
 # Generates JuceHeader.h for this target

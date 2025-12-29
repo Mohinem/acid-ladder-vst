@@ -40,6 +40,12 @@ jobs:
             cp -R "$d" artifacts/linux/
           done < <(find build-linux -type d -path "*_artefacts/Release/VST3/*.vst3")
 
+          # Copy any VST2 binaries if built (optional)
+          while IFS= read -r f; do
+            mkdir -p artifacts/linux/vst2
+            cp "$f" artifacts/linux/vst2/
+          done < <(find build-linux -type f -path "*_artefacts/Release/VST2/*.so")
+
           cd artifacts
           zip -r linux-vst3.zip linux
 
@@ -98,6 +104,17 @@ jobs:
           } else {
             Write-Host "Found VST3 module(s):"
             $modules | ForEach-Object { Write-Host " - $($_.FullName)" }
+          }
+
+          # Copy any VST2 binaries if built (optional)
+          $vst2Files = Get-ChildItem -Path build-win -Recurse -File -Filter *.dll |
+            Where-Object { $_.FullName -match "_artefacts\\Release\\VST2\\.*\.dll$" }
+
+          if ($vst2Files -and $vst2Files.Count -gt 0) {
+            New-Item -ItemType Directory -Force -Path artifacts/windows/vst2 | Out-Null
+            foreach ($f in $vst2Files) {
+              Copy-Item -Force -Path $f.FullName -Destination "artifacts/windows/vst2/"
+            }
           }
 
           Compress-Archive -Path artifacts/windows -DestinationPath artifacts/windows-vst3.zip -Force
