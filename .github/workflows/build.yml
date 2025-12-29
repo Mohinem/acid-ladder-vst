@@ -28,15 +28,18 @@ jobs:
         run: cmake -S . -B build-linux -G Ninja -DCMAKE_BUILD_TYPE=Release
 
       - name: Build
-        run: cmake --build build-linux --config Release -j
+        run: cmake --build build-linux -j
 
       - name: Package artifact
         run: |
+          set -euxo pipefail
           mkdir -p artifacts/linux
-          # Copy the built VST3 bundle(s)
-          find build-linux -path "*_artefacts/Release/VST3/*.vst3" -maxdepth 10 -type d -print -exec cp -r {} artifacts/linux/ \;
 
-          # Zip for convenience
+          # Copy the built VST3 bundle(s) (full directory trees)
+          while IFS= read -r d; do
+            cp -R "$d" artifacts/linux/
+          done < <(find build-linux -type d -path "*_artefacts/Release/VST3/*.vst3")
+
           cd artifacts
           zip -r linux-vst3.zip linux
 
@@ -67,13 +70,27 @@ jobs:
       - name: Package artifact
         shell: pwsh
         run: |
+          $ErrorActionPreference = "Stop"
           New-Item -ItemType Directory -Force -Path artifacts/windows | Out-Null
 
-          # Copy the built VST3 bundle(s)
-          $vst3Dirs = Get-ChildItem -Recurse -Directory -Path build-win | Where-Object { $_.FullName -match "_artefacts\\Release\\VST3\\.*\.vst3$" }
-          foreach ($d in $vst3Dirs) { Copy-Item -Recurse -Force $d.FullName artifacts/windows/ }
+          # Find all VST3 bundle directories inside _artefacts/Release/VST3/
+          $vst3Dirs = Get-ChildItem -Path build-win -Recurse -Directory -Filter *.vst3 |
+            Where-Object { $_.FullName -match "_artefacts\\Release\\VST3\\.*\.vst3$" }
 
-          # Zip for convenience
+          if (-not $vst3Dirs -or $vst3Dirs.Count -eq 0) {
+            Write-Error "No .vst3 bundles found under build-win/**/_artefacts/Release/VST3/"
+          }
+
+          foreach ($d in $vst3Dirs) {
+            Copy-Item -Recurse -Force -Path $d.FullName -Destination "artifacts/windows/"
+          }
+
+          # (Optional) sanity check: ensure DLL exists inside the bundle
+          $dlls = Get-ChildItem -Path "artifacts/windows" -Recurse -File -Filter *.dll
+          if (-not $dlls -or $dlls.Count -eq 0) {
+            Write-Error "Packaged artifact contains no .dll files. Bundles may be incomplete."
+          }
+
           Compress-Archive -Path artifacts/windows -DestinationPath artifacts/windows-vst3.zip -Force
 
       - name: Upload artifact (Windows)
