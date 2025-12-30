@@ -2,10 +2,10 @@
 #include "PluginEditor.h"
 
 //==============================================================================
-// Knob styling (minimal but more "pro" feeling)
+// Slider styling (minimal but more "pro" feeling)
 void AcidSynthAudioProcessorEditor::setupKnob (juce::Slider& s)
 {
-    s.setSliderStyle (juce::Slider::LinearVertical);
+    s.setSliderStyle (juce::Slider::LinearHorizontal);
 
     // Remove the clunky numeric boxes (prototype look)
     s.setTextBoxStyle (juce::Slider::NoTextBox, false, 0, 0);
@@ -19,6 +19,9 @@ void AcidSynthAudioProcessorEditor::setupKnob (juce::Slider& s)
 
     // Mouse wheel tweaks
     s.setScrollWheelEnabled (true);
+
+    // Hover/drag value popup for usability
+    s.setPopupDisplayEnabled (true, true, nullptr);
 }
 
 //==============================================================================
@@ -33,26 +36,38 @@ void AcidSynthAudioProcessorEditor::setupLabel (juce::Label& l, const juce::Stri
     addAndMakeVisible (l);
 }
 
+void AcidSynthAudioProcessorEditor::setupValueLabel (juce::Label& l)
+{
+    l.setJustificationType (juce::Justification::centred);
+    l.setFont (juce::Font (11.0f).withStyle (juce::Font::plain));
+    l.setColour (juce::Label::textColourId, juce::Colours::white.withAlpha (0.7f));
+    l.setInterceptsMouseClicks (false, false);
+    addAndMakeVisible (l);
+}
+
 //==============================================================================
 // Readout formatting
 void AcidSynthAudioProcessorEditor::updateReadout (const juce::String& name, const juce::Slider& s)
 {
-    juce::String value;
+    readoutLabel.setText (name + ": " + formatValue (s), juce::dontSendNotification);
+}
+
+juce::String AcidSynthAudioProcessorEditor::formatValue (const juce::Slider& s)
+{
     const auto v = s.getValue();
 
     if (std::abs (v) >= 1000.0)
-        value = juce::String (v, 1);
-    else if (std::abs (v) >= 100.0)
-        value = juce::String (v, 1);
-    else
-        value = juce::String (v, 3);
-
-    readoutLabel.setText (name + ": " + value, juce::dontSendNotification);
+        return juce::String (v, 1);
+    if (std::abs (v) >= 100.0)
+        return juce::String (v, 1);
+    if (std::abs (v) >= 10.0)
+        return juce::String (v, 2);
+    return juce::String (v, 3);
 }
 
 //==============================================================================
 // Connect slider interactions to top readout
-void AcidSynthAudioProcessorEditor::wireReadout (juce::Slider& s, const juce::String& name)
+void AcidSynthAudioProcessorEditor::wireReadout (juce::Slider& s, const juce::String& name, juce::Label& valueLabel)
 {
     s.setTooltip (name);
 
@@ -61,9 +76,10 @@ void AcidSynthAudioProcessorEditor::wireReadout (juce::Slider& s, const juce::St
         updateReadout (name, s);
     };
 
-    s.onValueChange = [this, &s, name]
+    s.onValueChange = [this, &s, name, &valueLabel]
     {
         updateReadout (name, s);
+        valueLabel.setText (formatValue (s), juce::dontSendNotification);
     };
 }
 
@@ -149,6 +165,11 @@ AcidSynthAudioProcessorEditor::AcidSynthAudioProcessorEditor (AcidSynthAudioProc
     setupLabel (unisonLabel, "UNISON");
     setupLabel (gainLabel,   "GAIN");
 
+    for (auto* l : { &waveValueLabel, &cutoffValueLabel, &resValueLabel, &envmodValueLabel, &decayValueLabel,
+                     &accentValueLabel, &glideValueLabel, &driveValueLabel, &satValueLabel, &subValueLabel,
+                     &unisonValueLabel, &gainValueLabel })
+        setupValueLabel (*l);
+
     // --- Attachments (unchanged)
     auto& apvts = processor.apvts;
     aWave   = std::make_unique<Attachment> (apvts, "wave",   wave);
@@ -169,18 +190,31 @@ AcidSynthAudioProcessorEditor::AcidSynthAudioProcessorEditor (AcidSynthAudioProc
         s->setDoubleClickReturnValue (true, s->getValue());
 
     // --- Readout wiring
-    wireReadout (wave,   "WAVE");
-    wireReadout (cutoff, "CUTOFF");
-    wireReadout (res,    "RES");
-    wireReadout (envmod, "ENVMOD");
-    wireReadout (decay,  "DECAY");
-    wireReadout (accent, "ACCENT");
-    wireReadout (glide,  "GLIDE");
-    wireReadout (drive,  "DRIVE");
-    wireReadout (sat,    "SAT");
-    wireReadout (sub,    "SUB");
-    wireReadout (unison, "UNISON");
-    wireReadout (gain,   "GAIN");
+    waveValueLabel.setText (formatValue (wave), juce::dontSendNotification);
+    cutoffValueLabel.setText (formatValue (cutoff), juce::dontSendNotification);
+    resValueLabel.setText (formatValue (res), juce::dontSendNotification);
+    envmodValueLabel.setText (formatValue (envmod), juce::dontSendNotification);
+    decayValueLabel.setText (formatValue (decay), juce::dontSendNotification);
+    accentValueLabel.setText (formatValue (accent), juce::dontSendNotification);
+    glideValueLabel.setText (formatValue (glide), juce::dontSendNotification);
+    driveValueLabel.setText (formatValue (drive), juce::dontSendNotification);
+    satValueLabel.setText (formatValue (sat), juce::dontSendNotification);
+    subValueLabel.setText (formatValue (sub), juce::dontSendNotification);
+    unisonValueLabel.setText (formatValue (unison), juce::dontSendNotification);
+    gainValueLabel.setText (formatValue (gain), juce::dontSendNotification);
+
+    wireReadout (wave,   "WAVE",   waveValueLabel);
+    wireReadout (cutoff, "CUTOFF", cutoffValueLabel);
+    wireReadout (res,    "RES",    resValueLabel);
+    wireReadout (envmod, "ENVMOD", envmodValueLabel);
+    wireReadout (decay,  "DECAY",  decayValueLabel);
+    wireReadout (accent, "ACCENT", accentValueLabel);
+    wireReadout (glide,  "GLIDE",  glideValueLabel);
+    wireReadout (drive,  "DRIVE",  driveValueLabel);
+    wireReadout (sat,    "SAT",    satValueLabel);
+    wireReadout (sub,    "SUB",    subValueLabel);
+    wireReadout (unison, "UNISON", unisonValueLabel);
+    wireReadout (gain,   "GAIN",   gainValueLabel);
 
     updateReadout ("CUTOFF", cutoff);
 
@@ -274,32 +308,35 @@ void AcidSynthAudioProcessorEditor::resized()
                                                gridArea.getWidth() / 3, groupHeader.getHeight()));
 
     // Helper: place a label + knob inside a cell
-    auto place = [&](juce::Label& lbl, juce::Slider& s, int col, int row)
+    auto place = [&](juce::Label& lbl, juce::Slider& s, juce::Label& valueLabel, int col, int row)
     {
         auto cell = cellRect (col, row);
 
         // label strip
-        auto labelArea = cell.removeFromTop (16);
+        auto labelArea = cell.removeFromTop (14);
         lbl.setBounds (labelArea);
+
+        auto valueArea = cell.removeFromBottom (14);
+        valueLabel.setBounds (valueArea);
 
         // knob gets the rest
         s.setBounds (cell);
     };
 
     // 3x4 placements
-    place (waveLabel,   wave,   0, 0);
-    place (cutoffLabel, cutoff, 1, 0);
-    place (resLabel,    res,    2, 0);
+    place (waveLabel,   wave,   waveValueLabel,   0, 0);
+    place (cutoffLabel, cutoff, cutoffValueLabel, 1, 0);
+    place (resLabel,    res,    resValueLabel,    2, 0);
 
-    place (envmodLabel, envmod, 0, 1);
-    place (decayLabel,  decay,  1, 1);
-    place (accentLabel, accent, 2, 1);
+    place (envmodLabel, envmod, envmodValueLabel, 0, 1);
+    place (decayLabel,  decay,  decayValueLabel,  1, 1);
+    place (accentLabel, accent, accentValueLabel, 2, 1);
 
-    place (glideLabel,  glide,  0, 2);
-    place (driveLabel,  drive,  1, 2);
-    place (satLabel,    sat,    2, 2);
+    place (glideLabel,  glide,  glideValueLabel,  0, 2);
+    place (driveLabel,  drive,  driveValueLabel,  1, 2);
+    place (satLabel,    sat,    satValueLabel,    2, 2);
 
-    place (subLabel,    sub,    0, 3);
-    place (unisonLabel, unison, 1, 3);
-    place (gainLabel,   gain,   2, 3);
+    place (subLabel,    sub,    subValueLabel,    0, 3);
+    place (unisonLabel, unison, unisonValueLabel, 1, 3);
+    place (gainLabel,   gain,   gainValueLabel,   2, 3);
 }

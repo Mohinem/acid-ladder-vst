@@ -23,6 +23,9 @@ private:
     // Labels (real components, not painted text)
     juce::Label waveLabel, cutoffLabel, resLabel, envmodLabel, decayLabel, accentLabel, glideLabel,
         driveLabel, satLabel, subLabel, unisonLabel, gainLabel;
+    juce::Label waveValueLabel, cutoffValueLabel, resValueLabel, envmodValueLabel, decayValueLabel,
+        accentValueLabel, glideValueLabel, driveValueLabel, satValueLabel, subValueLabel,
+        unisonValueLabel, gainValueLabel;
 
     // Top bar text
     juce::Label titleLabel;
@@ -36,10 +39,12 @@ private:
         aSat, aSub, aUnison, aGain;
 
     // Internal helpers
-    static void setupKnob (juce::Slider& s);
+    void setupKnob (juce::Slider& s);
     void setupLabel (juce::Label& l, const juce::String& text);
-    void wireReadout (juce::Slider& s, const juce::String& name);
+    void setupValueLabel (juce::Label& l);
+    void wireReadout (juce::Slider& s, const juce::String& name, juce::Label& valueLabel);
     void updateReadout (const juce::String& name, const juce::Slider& s);
+    static juce::String formatValue (const juce::Slider& s);
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AcidSynthAudioProcessorEditor)
 };
