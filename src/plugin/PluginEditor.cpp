@@ -5,7 +5,7 @@
 // Knob styling (minimal but more "pro" feeling)
 void AcidSynthAudioProcessorEditor::setupKnob (juce::Slider& s)
 {
-    s.setSliderStyle (juce::Slider::RotaryHorizontalDrag);
+    s.setSliderStyle (juce::Slider::LinearVertical);
 
     // Remove the clunky numeric boxes (prototype look)
     s.setTextBoxStyle (juce::Slider::NoTextBox, false, 0, 0);
