@@ -67,13 +67,13 @@ juce::AudioProcessorValueTreeState::ParameterLayout AcidSynthAudioProcessor::cre
                                                         NormalisableRange<float>(0.0f, 1.5f), 0.85f));
 
     p.push_back (std::make_unique<AudioParameterFloat> ("lfo1Rate", "LFO 1 Rate",
-                                                        NormalisableRange<float>(0.05f, 15.0f, 0.0f, 0.5f), 2.2f));
+                                                        NormalisableRange<float>(0.0f, 15.0f, 0.0f, 0.5f), 2.2f));
 
     p.push_back (std::make_unique<AudioParameterFloat> ("lfo2Rate", "LFO 2 Rate",
-                                                        NormalisableRange<float>(0.05f, 15.0f, 0.0f, 0.5f), 4.8f));
+                                                        NormalisableRange<float>(0.0f, 15.0f, 0.0f, 0.5f), 4.8f));
 
     p.push_back (std::make_unique<AudioParameterFloat> ("modEnvDecay", "Mod Env Decay",
-                                                        NormalisableRange<float>(0.02f, 2.5f, 0.0f, 0.4f), 0.55f));
+                                                        NormalisableRange<float>(0.0f, 2.5f, 0.0f, 0.4f), 0.55f));
 
     p.push_back (std::make_unique<AudioParameterChoice> ("mod1Source", "Mod 1 Source", modSources, 0));
     p.push_back (std::make_unique<AudioParameterChoice> ("mod1Dest", "Mod 1 Dest", modDests, 0));
