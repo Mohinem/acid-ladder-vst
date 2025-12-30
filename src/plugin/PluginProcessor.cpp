@@ -48,6 +48,15 @@ juce::AudioProcessorValueTreeState::ParameterLayout AcidSynthAudioProcessor::cre
     p.push_back (std::make_unique<AudioParameterFloat> ("drive",  "Drive",
                                                         NormalisableRange<float>(0.0f, 1.0f, 0.001f), 0.35f));
 
+    p.push_back (std::make_unique<AudioParameterFloat> ("sat",    "Saturation",
+                                                        NormalisableRange<float>(0.0f, 1.0f, 0.001f), 0.2f));
+
+    p.push_back (std::make_unique<AudioParameterFloat> ("sub",    "Sub Mix",
+                                                        NormalisableRange<float>(0.0f, 1.0f, 0.001f), 0.35f));
+
+    p.push_back (std::make_unique<AudioParameterFloat> ("unison", "Unison",
+                                                        NormalisableRange<float>(0.0f, 1.0f, 0.001f), 0.25f));
+
     p.push_back (std::make_unique<AudioParameterFloat> ("gain",   "Gain",
                                                         NormalisableRange<float>(0.0f, 1.5f, 0.001f), 0.85f));
 
@@ -86,9 +95,12 @@ void AcidSynthAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, ju
     const float accent = getParam (apvts, "accent");
     const float glide  = getParam (apvts, "glide");
     const float drive  = getParam (apvts, "drive");
+    const float sat    = getParam (apvts, "sat");
+    const float subMix = getParam (apvts, "sub");
+    const float unison = getParam (apvts, "unison");
     const float gain   = getParam (apvts, "gain");
 
-    voice.setParams (wave, cutoff, res, envmod, decay, accent, glide, drive, gain);
+    voice.setParams (wave, cutoff, res, envmod, decay, accent, glide, drive, sat, subMix, unison, gain);
 
     // handle MIDI (mono)
     for (const auto metadata : midi)

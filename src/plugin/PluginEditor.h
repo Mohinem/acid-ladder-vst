@@ -18,10 +18,11 @@ private:
     juce::MidiKeyboardComponent keyboard;
 
     // Sliders
-    juce::Slider wave, cutoff, res, envmod, decay, accent, glide, drive, gain;
+    juce::Slider wave, cutoff, res, envmod, decay, accent, glide, drive, sat, sub, unison, gain;
 
     // Labels (real components, not painted text)
-    juce::Label waveLabel, cutoffLabel, resLabel, envmodLabel, decayLabel, accentLabel, glideLabel, driveLabel, gainLabel;
+    juce::Label waveLabel, cutoffLabel, resLabel, envmodLabel, decayLabel, accentLabel, glideLabel,
+        driveLabel, satLabel, subLabel, unisonLabel, gainLabel;
 
     // Top bar text
     juce::Label titleLabel;
@@ -31,7 +32,8 @@ private:
     juce::Label groupLeft, groupMid, groupRight;
 
     using Attachment = juce::AudioProcessorValueTreeState::SliderAttachment;
-    std::unique_ptr<Attachment> aWave, aCutoff, aRes, aEnvmod, aDecay, aAccent, aGlide, aDrive, aGain;
+    std::unique_ptr<Attachment> aWave, aCutoff, aRes, aEnvmod, aDecay, aAccent, aGlide, aDrive,
+        aSat, aSub, aUnison, aGain;
 
     // Internal helpers
     static void setupKnob (juce::Slider& s);
