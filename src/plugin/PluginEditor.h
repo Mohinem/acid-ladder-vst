@@ -27,25 +27,44 @@ private:
     juce::MidiKeyboardComponent keyboard;
 
     // Sliders
-    juce::Slider wave, cutoff, res, envmod, decay, accent, glide, drive, sat, sub, unison, gain;
+    juce::Slider wave, cutoff, res, envmod, decay, accent, glide, drive, sat, sub, unison, unisonSpread, gain;
+    juce::Slider lfo1Rate, lfo2Rate, modEnvDecay;
+    juce::Slider mod1Amount, mod2Amount, mod3Amount;
+    juce::Slider fxDrive, fxChorus, fxDelay, fxDelayTime, fxReverb;
 
     // Labels (real components, not painted text)
     juce::Label waveLabel, cutoffLabel, resLabel, envmodLabel, decayLabel, accentLabel, glideLabel,
-        driveLabel, satLabel, subLabel, unisonLabel, gainLabel;
+        driveLabel, satLabel, subLabel, unisonLabel, unisonSpreadLabel, gainLabel;
+    juce::Label lfo1RateLabel, lfo2RateLabel, modEnvDecayLabel;
+    juce::Label mod1AmountLabel, mod2AmountLabel, mod3AmountLabel;
+    juce::Label fxDriveLabel, fxChorusLabel, fxDelayLabel, fxDelayTimeLabel, fxReverbLabel;
     juce::Label waveValueLabel, cutoffValueLabel, resValueLabel, envmodValueLabel, decayValueLabel,
         accentValueLabel, glideValueLabel, driveValueLabel, satValueLabel, subValueLabel,
-        unisonValueLabel, gainValueLabel;
+        unisonValueLabel, unisonSpreadValueLabel, gainValueLabel;
+    juce::Label lfo1RateValueLabel, lfo2RateValueLabel, modEnvDecayValueLabel;
+    juce::Label mod1AmountValueLabel, mod2AmountValueLabel, mod3AmountValueLabel;
+    juce::Label fxDriveValueLabel, fxChorusValueLabel, fxDelayValueLabel, fxDelayTimeValueLabel, fxReverbValueLabel;
 
     // Top bar text
     juce::Label titleLabel;
     juce::Label readoutLabel;
 
     // Optional group headers (small polish)
-    juce::Label groupLeft, groupMid, groupRight;
+    juce::Label groupLeft, groupMid, groupRight, groupExtra;
+    juce::Label modHeaderLabel, fxHeaderLabel, modSourceHeader, modAmountHeader, modDestHeader;
+    juce::Label modRow1Label, modRow2Label, modRow3Label;
+
+    juce::ComboBox mod1Source, mod1Dest, mod2Source, mod2Dest, mod3Source, mod3Dest;
 
     using Attachment = juce::AudioProcessorValueTreeState::SliderAttachment;
+    using ComboAttachment = juce::AudioProcessorValueTreeState::ComboBoxAttachment;
+
     std::unique_ptr<Attachment> aWave, aCutoff, aRes, aEnvmod, aDecay, aAccent, aGlide, aDrive,
-        aSat, aSub, aUnison, aGain;
+        aSat, aSub, aUnison, aUnisonSpread, aGain;
+    std::unique_ptr<Attachment> aLfo1Rate, aLfo2Rate, aModEnvDecay;
+    std::unique_ptr<Attachment> aMod1Amount, aMod2Amount, aMod3Amount;
+    std::unique_ptr<Attachment> aFxDrive, aFxChorus, aFxDelay, aFxDelayTime, aFxReverb;
+    std::unique_ptr<ComboAttachment> aMod1Source, aMod1Dest, aMod2Source, aMod2Dest, aMod3Source, aMod3Dest;
 
     // Internal helpers
     void setupKnob (juce::Slider& s);
