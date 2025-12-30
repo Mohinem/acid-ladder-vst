@@ -467,7 +467,7 @@ void AcidSynthAudioProcessorEditor::paint (juce::Graphics& g)
     // Panels
     auto content = bounds.reduced (10);
     auto keyboardStrip = content.removeFromBottom (100);
-    auto modFxPanel = content.removeFromBottom (210);
+    auto modFxPanel = content.removeFromBottom (240);
     auto knobPanel = content;
 
     g.setColour (juce::Colours::white.withAlpha (0.05f));
@@ -506,7 +506,7 @@ void AcidSynthAudioProcessorEditor::resized()
     keyboard.setBounds (keyboardArea.reduced (0, 8));
 
     // Mod/FX panel area
-    auto modFxPanel = content.removeFromBottom (190);
+    auto modFxPanel = content.removeFromBottom (240);
 
     // Knob panel area
     auto gridArea = content.reduced (18, 14);
@@ -620,7 +620,7 @@ void AcidSynthAudioProcessorEditor::resized()
     auto fxHeader = fxArea.removeFromTop (18);
     fxHeaderLabel.setBounds (fxHeader);
 
-    auto fxSourcesArea = fxArea.removeFromTop (70);
+    auto fxSourcesArea = fxArea.removeFromTop (78);
     fxSourcesArea = fxSourcesArea.reduced (6, 4);
     const int fxSourceCellW = fxSourcesArea.getWidth() / 3;
     auto fxSourceCell = [&](juce::Label& lbl, juce::Slider& s, juce::Label& valueLabel, int col)
@@ -640,7 +640,7 @@ void AcidSynthAudioProcessorEditor::resized()
     fxSourceCell (lfo2RateLabel, lfo2Rate, lfo2RateValueLabel, 1);
     fxSourceCell (modEnvDecayLabel, modEnvDecay, modEnvDecayValueLabel, 2);
 
-    auto fxControlsArea = fxArea.reduced (6, 8);
+    auto fxControlsArea = fxArea.removeFromTop (120).reduced (6, 8);
     const int fxCols = 3;
     const int fxRows = 2;
     const int fxCellW = fxControlsArea.getWidth() / fxCols;
