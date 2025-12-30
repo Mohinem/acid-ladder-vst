@@ -13,6 +13,9 @@ public:
         sr = (float) sampleRate;
 
         phase = 0.0f;
+        phaseUnisonA = 0.0f;
+        phaseUnisonB = 0.0f;
+        phaseSub = 0.0f;
         env = 0.0f;
         envCoef = 0.0f;
 
@@ -31,7 +34,8 @@ public:
 
     void setParams (float waveIn, float cutoffIn, float resIn, float envmodIn,
                     float decayIn, float accentIn, float glideMsIn,
-                    float driveIn, float gainIn)
+                    float driveIn, float satIn, float subMixIn,
+                    float unisonIn, float gainIn)
     {
         wave    = waveIn;
         cutoff  = cutoffIn;     // Hz
@@ -41,6 +45,9 @@ public:
         accent  = accentIn;     // 0..1
         glideMs = glideMsIn;    // ms
         drive   = driveIn;      // 0..1
+        sat     = satIn;        // 0..1
+        subMix  = subMixIn;     // 0..1
+        unison  = unisonIn;     // 0..1
         gain    = gainIn;       // linear
 
         // simple exponential decay envelope coefficient
@@ -67,6 +74,11 @@ public:
         gate = false;
         env = 0.0f;
 
+        phase = 0.0f;
+        phaseUnisonA = 0.0f;
+        phaseUnisonB = 0.0f;
+        phaseSub = 0.0f;
+
         z1 = z2 = z3 = z4 = 0.0f;
         lastY = 0.0f;
     }
@@ -82,9 +94,46 @@ public:
         phase += currentFreq / sr;
         if (phase >= 1.0f) phase -= 1.0f;
 
-        float saw = 2.0f * phase - 1.0f;
-        float sq  = (phase < 0.5f) ? 1.0f : -1.0f;
-        float osc = juce::jmap (wave, saw, sq);
+        auto renderWave = [this] (float p)
+        {
+            float saw = 2.0f * p - 1.0f;
+            float sq  = (p < 0.5f) ? 1.0f : -1.0f;
+            return juce::jmap (wave, saw, sq);
+        };
+
+        float oscMain = renderWave (phase);
+
+        const float unisonAmt = juce::jlimit (0.0f, 1.0f, unison);
+        float osc = oscMain;
+
+        if (unisonAmt > 0.0001f)
+        {
+            const float detuneCents = 7.0f + 25.0f * unisonAmt;
+            const float detuneRatio = std::pow (2.0f, detuneCents / 1200.0f);
+
+            phaseUnisonA += (currentFreq * detuneRatio) / sr;
+            phaseUnisonB += (currentFreq / detuneRatio) / sr;
+
+            if (phaseUnisonA >= 1.0f) phaseUnisonA -= 1.0f;
+            if (phaseUnisonB >= 1.0f) phaseUnisonB -= 1.0f;
+
+            const float oscA = renderWave (phaseUnisonA);
+            const float oscB = renderWave (phaseUnisonB);
+
+            const float mainWeight = 1.0f - 0.35f * unisonAmt;
+            const float sideWeight = 0.175f * unisonAmt;
+            osc = mainWeight * oscMain + sideWeight * (oscA + oscB);
+        }
+
+        const float subAmt = juce::jlimit (0.0f, 1.0f, subMix);
+        if (subAmt > 0.0001f)
+        {
+            phaseSub += (currentFreq * 0.5f) / sr;
+            if (phaseSub >= 1.0f) phaseSub -= 1.0f;
+
+            const float sub = std::sin (juce::MathConstants<float>::twoPi * phaseSub);
+            osc += subAmt * 0.8f * sub;
+        }
 
         // --- envelope decay ---
         env *= envCoef;
@@ -127,6 +176,11 @@ public:
         // optional output saturation (kept from your original "drive coloration")
         y = std::tanh (y);
 
+        // post-filter drive stage for extra power
+        const float satAmt = juce::jlimit (0.0f, 1.0f, sat);
+        if (satAmt > 0.0001f)
+            y = softClip (y * (1.0f + 8.0f * satAmt));
+
         // accent boosts volume a bit based on velocity (same as before)
         const float acc = 1.0f + accent * 0.6f * (vel > 0.7f ? 1.0f : 0.0f);
 
@@ -151,6 +205,9 @@ private:
     float sr = 44100.0f;
 
     float phase = 0.0f;
+    float phaseUnisonA = 0.0f;
+    float phaseUnisonB = 0.0f;
+    float phaseSub = 0.0f;
 
     float env = 0.0f;
     float envCoef = 0.0f;
@@ -170,6 +227,9 @@ private:
     float accent  = 0.0f;     // 0..1
     float glideMs = 0.0f;     // ms
     float drive   = 0.0f;     // 0..1
+    float sat     = 0.0f;     // 0..1
+    float subMix  = 0.0f;     // 0..1
+    float unison  = 0.0f;     // 0..1
     float gain    = 0.2f;     // linear
 
     // --- filter state (ladder-ish) ---

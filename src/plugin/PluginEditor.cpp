@@ -83,6 +83,9 @@ AcidSynthAudioProcessorEditor::AcidSynthAudioProcessorEditor (AcidSynthAudioProc
     setupKnob (accent);
     setupKnob (glide);
     setupKnob (drive);
+    setupKnob (sat);
+    setupKnob (sub);
+    setupKnob (unison);
     setupKnob (gain);
 
     addAndMakeVisible (wave);
@@ -93,6 +96,9 @@ AcidSynthAudioProcessorEditor::AcidSynthAudioProcessorEditor (AcidSynthAudioProc
     addAndMakeVisible (accent);
     addAndMakeVisible (glide);
     addAndMakeVisible (drive);
+    addAndMakeVisible (sat);
+    addAndMakeVisible (sub);
+    addAndMakeVisible (unison);
     addAndMakeVisible (gain);
 
     // --- Keyboard
@@ -138,6 +144,9 @@ AcidSynthAudioProcessorEditor::AcidSynthAudioProcessorEditor (AcidSynthAudioProc
 
     setupLabel (glideLabel,  "GLIDE");
     setupLabel (driveLabel,  "DRIVE");
+    setupLabel (satLabel,    "SAT");
+    setupLabel (subLabel,    "SUB");
+    setupLabel (unisonLabel, "UNISON");
     setupLabel (gainLabel,   "GAIN");
 
     // --- Attachments (unchanged)
@@ -150,10 +159,13 @@ AcidSynthAudioProcessorEditor::AcidSynthAudioProcessorEditor (AcidSynthAudioProc
     aAccent = std::make_unique<Attachment> (apvts, "accent", accent);
     aGlide  = std::make_unique<Attachment> (apvts, "glide",  glide);
     aDrive  = std::make_unique<Attachment> (apvts, "drive",  drive);
+    aSat    = std::make_unique<Attachment> (apvts, "sat",    sat);
+    aSub    = std::make_unique<Attachment> (apvts, "sub",    sub);
+    aUnison = std::make_unique<Attachment> (apvts, "unison", unison);
     aGain   = std::make_unique<Attachment> (apvts, "gain",   gain);
 
     // --- Double-click reset
-    for (auto* s : { &wave, &cutoff, &res, &envmod, &decay, &accent, &glide, &drive, &gain })
+    for (auto* s : { &wave, &cutoff, &res, &envmod, &decay, &accent, &glide, &drive, &sat, &sub, &unison, &gain })
         s->setDoubleClickReturnValue (true, s->getValue());
 
     // --- Readout wiring
@@ -165,6 +177,9 @@ AcidSynthAudioProcessorEditor::AcidSynthAudioProcessorEditor (AcidSynthAudioProc
     wireReadout (accent, "ACCENT");
     wireReadout (glide,  "GLIDE");
     wireReadout (drive,  "DRIVE");
+    wireReadout (sat,    "SAT");
+    wireReadout (sub,    "SUB");
+    wireReadout (unison, "UNISON");
     wireReadout (gain,   "GAIN");
 
     updateReadout ("CUTOFF", cutoff);
@@ -238,7 +253,7 @@ void AcidSynthAudioProcessorEditor::resized()
 
     // 3 columns
     const int cols = 3;
-    const int rows = 3;
+    const int rows = 4;
 
     const int cellW = gridArea.getWidth() / cols;
     const int cellH = gridArea.getHeight() / rows;
@@ -271,7 +286,7 @@ void AcidSynthAudioProcessorEditor::resized()
         s.setBounds (cell);
     };
 
-    // 3x3 placements
+    // 3x4 placements
     place (waveLabel,   wave,   0, 0);
     place (cutoffLabel, cutoff, 1, 0);
     place (resLabel,    res,    2, 0);
@@ -282,5 +297,9 @@ void AcidSynthAudioProcessorEditor::resized()
 
     place (glideLabel,  glide,  0, 2);
     place (driveLabel,  drive,  1, 2);
-    place (gainLabel,   gain,   2, 2);
+    place (satLabel,    sat,    2, 2);
+
+    place (subLabel,    sub,    0, 3);
+    place (unisonLabel, unison, 1, 3);
+    place (gainLabel,   gain,   2, 3);
 }
