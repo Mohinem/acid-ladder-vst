@@ -444,7 +444,7 @@ AcidSynthAudioProcessorEditor::AcidSynthAudioProcessorEditor (AcidSynthAudioProc
 
     updateReadout ("CUTOFF", cutoff);
 
-    setSize (1020, 600);
+    setSize (1020, 640);
 }
 
 //==============================================================================
@@ -623,15 +623,17 @@ void AcidSynthAudioProcessorEditor::resized()
     auto fxSourcesArea = fxArea.removeFromTop (78);
     fxSourcesArea = fxSourcesArea.reduced (6, 4);
     const int fxSourceCellW = fxSourcesArea.getWidth() / 3;
+    const int fxLabelHeight = 12;
+    const int fxValueHeight = 12;
     auto fxSourceCell = [&](juce::Label& lbl, juce::Slider& s, juce::Label& valueLabel, int col)
     {
         auto cell = juce::Rectangle<int> (fxSourcesArea.getX() + col * fxSourceCellW,
                                           fxSourcesArea.getY(),
                                           fxSourceCellW,
                                           fxSourcesArea.getHeight()).reduced (6, 0);
-        auto labelArea = cell.removeFromTop (14);
+        auto labelArea = cell.removeFromTop (fxLabelHeight);
         lbl.setBounds (labelArea);
-        auto valueArea = cell.removeFromBottom (14);
+        auto valueArea = cell.removeFromBottom (fxValueHeight);
         valueLabel.setBounds (valueArea);
         s.setBounds (cell);
     };
@@ -651,9 +653,9 @@ void AcidSynthAudioProcessorEditor::resized()
         auto cell = juce::Rectangle<int> (fxControlsArea.getX() + col * fxCellW,
                                           fxControlsArea.getY() + row * fxCellH,
                                           fxCellW, fxCellH).reduced (8, 6);
-        auto labelArea = cell.removeFromTop (14);
+        auto labelArea = cell.removeFromTop (fxLabelHeight);
         lbl.setBounds (labelArea);
-        auto valueArea = cell.removeFromBottom (14);
+        auto valueArea = cell.removeFromBottom (fxValueHeight);
         valueLabel.setBounds (valueArea);
         s.setBounds (cell);
     };
