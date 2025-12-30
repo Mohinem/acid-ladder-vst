@@ -121,7 +121,7 @@ void AcidSynthAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBl
     juce::dsp::ProcessSpec spec;
     spec.sampleRate = sampleRate;
     spec.maximumBlockSize = static_cast<juce::uint32> (samplesPerBlock);
-    spec.numChannels = static_cast<juce::uint32> (getTotalNumOutputChannels());
+    spec.numChannels = static_cast<juce::uint32> (juce::jmax (1, getTotalNumOutputChannels()));
 
     chorus.prepare (spec);
     chorus.setCentreDelay (12.0f);
@@ -129,6 +129,8 @@ void AcidSynthAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBl
 
     delayLineL.reset();
     delayLineR.reset();
+    delayLineL.prepare (spec);
+    delayLineR.prepare (spec);
 
     reverb.reset();
 }
@@ -209,6 +211,9 @@ void AcidSynthAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, ju
 
     const int numSamples = buffer.getNumSamples();
     const int numCh = buffer.getNumChannels();
+
+    if (numCh == 0 || numSamples == 0)
+        return;
 
     for (int i = 0; i < numSamples; ++i)
     {
