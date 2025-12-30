@@ -99,10 +99,11 @@ public:
         const float g = 1.0f - std::exp (-2.0f * juce::MathConstants<float>::pi * fc / sr);
 
         // Resonance amount. This is "by ear" scaling.
-        // Typical usable range: res 0..1 => k about 0..~4.
+        // Make sure the full knob range is audibly effective.
         // Too high without clipping can explode, so we soft-clip the loop.
-        float k = juce::jlimit (0.0f, 1.0f, res);
-        k *= 4.0f;
+        const float resNorm = juce::jlimit (0.0f, 1.0f, res);
+        float k = juce::jmap (resNorm, 0.0f, 1.0f, 0.0f, 8.0f);
+        k *= (1.0f - 0.25f * g);
 
         // Drive: pre-gain into the ladder core
         const float pre = 1.0f + 6.0f * juce::jlimit (0.0f, 1.0f, drive);
