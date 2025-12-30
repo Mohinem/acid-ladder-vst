@@ -28,82 +28,82 @@ juce::AudioProcessorValueTreeState::ParameterLayout AcidSynthAudioProcessor::cre
     auto modDests = StringArray { "Off", "Cutoff", "Pitch", "Drive", "Gain", "Pan" };
 
     p.push_back (std::make_unique<AudioParameterFloat> ("wave",   "Wave",
-                                                        NormalisableRange<float>(0.0f, 1.0f, 0.001f), 0.0f));
+                                                        NormalisableRange<float>(0.0f, 1.0f), 0.0f));
 
     p.push_back (std::make_unique<AudioParameterFloat> ("cutoff", "Cutoff",
                                                         NormalisableRange<float>(20.0f, 18000.0f, 0.0f, 0.35f), 800.0f));
 
     p.push_back (std::make_unique<AudioParameterFloat> ("res",    "Resonance",
-                                                        NormalisableRange<float>(0.0f, 0.995f, 0.0001f), 0.35f));
+                                                        NormalisableRange<float>(0.0f, 0.995f), 0.35f));
 
     p.push_back (std::make_unique<AudioParameterFloat> ("envmod", "Env Mod",
-                                                        NormalisableRange<float>(0.0f, 1.0f, 0.001f), 0.75f));
+                                                        NormalisableRange<float>(0.0f, 1.0f), 0.75f));
 
     p.push_back (std::make_unique<AudioParameterFloat> ("decay",  "Decay",
-                                                        NormalisableRange<float>(0.01f, 2.0f, 0.001f, 0.4f), 0.18f));
+                                                        NormalisableRange<float>(0.01f, 2.0f, 0.0f, 0.4f), 0.18f));
 
     p.push_back (std::make_unique<AudioParameterFloat> ("accent", "Accent",
-                                                        NormalisableRange<float>(0.0f, 1.0f, 0.001f), 0.75f));
+                                                        NormalisableRange<float>(0.0f, 1.0f), 0.75f));
 
     p.push_back (std::make_unique<AudioParameterFloat> ("glide",  "Glide(ms)",
-                                                        NormalisableRange<float>(0.0f, 500.0f, 0.1f, 0.5f), 80.0f));
+                                                        NormalisableRange<float>(0.0f, 500.0f, 0.0f, 0.5f), 80.0f));
 
     p.push_back (std::make_unique<AudioParameterFloat> ("drive",  "Drive",
-                                                        NormalisableRange<float>(0.0f, 1.0f, 0.001f), 0.35f));
+                                                        NormalisableRange<float>(0.0f, 1.0f), 0.35f));
 
     p.push_back (std::make_unique<AudioParameterFloat> ("sat",    "Saturation",
-                                                        NormalisableRange<float>(0.0f, 1.0f, 0.001f), 0.2f));
+                                                        NormalisableRange<float>(0.0f, 1.0f), 0.2f));
 
     p.push_back (std::make_unique<AudioParameterFloat> ("sub",    "Sub Mix",
-                                                        NormalisableRange<float>(0.0f, 1.0f, 0.001f), 0.35f));
+                                                        NormalisableRange<float>(0.0f, 1.0f), 0.35f));
 
     p.push_back (std::make_unique<AudioParameterFloat> ("unison", "Unison",
-                                                        NormalisableRange<float>(0.0f, 1.0f, 0.001f), 0.25f));
+                                                        NormalisableRange<float>(0.0f, 1.0f), 0.25f));
 
     p.push_back (std::make_unique<AudioParameterFloat> ("unisonSpread", "Unison Spread",
-                                                        NormalisableRange<float>(0.0f, 1.0f, 0.001f), 0.45f));
+                                                        NormalisableRange<float>(0.0f, 1.0f), 0.45f));
 
     p.push_back (std::make_unique<AudioParameterFloat> ("gain",   "Gain",
-                                                        NormalisableRange<float>(0.0f, 1.5f, 0.001f), 0.85f));
+                                                        NormalisableRange<float>(0.0f, 1.5f), 0.85f));
 
     p.push_back (std::make_unique<AudioParameterFloat> ("lfo1Rate", "LFO 1 Rate",
-                                                        NormalisableRange<float>(0.05f, 15.0f, 0.001f, 0.5f), 2.2f));
+                                                        NormalisableRange<float>(0.05f, 15.0f, 0.0f, 0.5f), 2.2f));
 
     p.push_back (std::make_unique<AudioParameterFloat> ("lfo2Rate", "LFO 2 Rate",
-                                                        NormalisableRange<float>(0.05f, 15.0f, 0.001f, 0.5f), 4.8f));
+                                                        NormalisableRange<float>(0.05f, 15.0f, 0.0f, 0.5f), 4.8f));
 
     p.push_back (std::make_unique<AudioParameterFloat> ("modEnvDecay", "Mod Env Decay",
-                                                        NormalisableRange<float>(0.02f, 2.5f, 0.001f, 0.4f), 0.55f));
+                                                        NormalisableRange<float>(0.02f, 2.5f, 0.0f, 0.4f), 0.55f));
 
     p.push_back (std::make_unique<AudioParameterChoice> ("mod1Source", "Mod 1 Source", modSources, 0));
     p.push_back (std::make_unique<AudioParameterChoice> ("mod1Dest", "Mod 1 Dest", modDests, 0));
     p.push_back (std::make_unique<AudioParameterFloat> ("mod1Amount", "Mod 1 Amount",
-                                                        NormalisableRange<float>(-1.0f, 1.0f, 0.001f), 0.0f));
+                                                        NormalisableRange<float>(-1.0f, 1.0f), 0.0f));
 
     p.push_back (std::make_unique<AudioParameterChoice> ("mod2Source", "Mod 2 Source", modSources, 0));
     p.push_back (std::make_unique<AudioParameterChoice> ("mod2Dest", "Mod 2 Dest", modDests, 0));
     p.push_back (std::make_unique<AudioParameterFloat> ("mod2Amount", "Mod 2 Amount",
-                                                        NormalisableRange<float>(-1.0f, 1.0f, 0.001f), 0.0f));
+                                                        NormalisableRange<float>(-1.0f, 1.0f), 0.0f));
 
     p.push_back (std::make_unique<AudioParameterChoice> ("mod3Source", "Mod 3 Source", modSources, 0));
     p.push_back (std::make_unique<AudioParameterChoice> ("mod3Dest", "Mod 3 Dest", modDests, 0));
     p.push_back (std::make_unique<AudioParameterFloat> ("mod3Amount", "Mod 3 Amount",
-                                                        NormalisableRange<float>(-1.0f, 1.0f, 0.001f), 0.0f));
+                                                        NormalisableRange<float>(-1.0f, 1.0f), 0.0f));
 
     p.push_back (std::make_unique<AudioParameterFloat> ("fxDrive", "FX Drive",
-                                                        NormalisableRange<float>(0.0f, 1.0f, 0.001f), 0.15f));
+                                                        NormalisableRange<float>(0.0f, 1.0f), 0.15f));
 
     p.push_back (std::make_unique<AudioParameterFloat> ("fxChorus", "Chorus",
-                                                        NormalisableRange<float>(0.0f, 1.0f, 0.001f), 0.18f));
+                                                        NormalisableRange<float>(0.0f, 1.0f), 0.18f));
 
     p.push_back (std::make_unique<AudioParameterFloat> ("fxDelay", "Delay",
-                                                        NormalisableRange<float>(0.0f, 1.0f, 0.001f), 0.2f));
+                                                        NormalisableRange<float>(0.0f, 1.0f), 0.2f));
 
     p.push_back (std::make_unique<AudioParameterFloat> ("fxDelayTime", "Delay Time",
-                                                        NormalisableRange<float>(5.0f, 700.0f, 0.1f, 0.5f), 260.0f));
+                                                        NormalisableRange<float>(5.0f, 700.0f, 0.0f, 0.5f), 260.0f));
 
     p.push_back (std::make_unique<AudioParameterFloat> ("fxReverb", "Reverb",
-                                                        NormalisableRange<float>(0.0f, 1.0f, 0.001f), 0.25f));
+                                                        NormalisableRange<float>(0.0f, 1.0f), 0.25f));
 
     return { p.begin(), p.end() };
 }
