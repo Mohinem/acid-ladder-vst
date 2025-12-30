@@ -11,21 +11,15 @@ AcidSynthAudioProcessorEditor::~AcidSynthAudioProcessorEditor()
 // Knob styling (minimal but more "pro" feeling)
 void AcidSynthAudioProcessorEditor::setupKnob (juce::Slider& s)
 {
-    s.setSliderStyle (juce::Slider::RotaryHorizontalVerticalDrag);
-    s.setRotaryParameters (juce::MathConstants<float>::pi * 1.25f,
-                           juce::MathConstants<float>::pi * 2.75f,
-                           true);
+    s.setSliderStyle (juce::Slider::LinearHorizontal);
 
     // Remove the clunky numeric boxes (prototype look)
     s.setTextBoxStyle (juce::Slider::NoTextBox, false, 0, 0);
 
     s.setLookAndFeel (&knobLookAndFeel);
 
-    // Better feel: velocity mode makes rotary control smoother/more "plugin-like"
-    s.setVelocityBasedMode (true);
-    s.setVelocityModeParameters (0.95, 1, 0.05, true);
-
-    // Shorter drag distance for faster adjustments on mouse/trackpad
+    // Direct horizontal dragging for slider-style controls
+    s.setVelocityBasedMode (false);
     s.setMouseDragSensitivity (110);
 
     // Mouse wheel tweaks
