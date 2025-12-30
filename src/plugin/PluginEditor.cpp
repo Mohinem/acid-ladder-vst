@@ -3,7 +3,9 @@
 
 AcidSynthAudioProcessorEditor::~AcidSynthAudioProcessorEditor()
 {
-    for (auto* s : { &wave, &cutoff, &res, &envmod, &decay, &accent, &glide, &drive, &sat, &sub, &unison, &gain })
+    for (auto* s : { &wave, &cutoff, &res, &envmod, &decay, &accent, &glide, &drive, &sat, &sub, &unison,
+                     &unisonSpread, &gain, &lfo1Rate, &lfo2Rate, &modEnvDecay, &mod1Amount, &mod2Amount, &mod3Amount,
+                     &fxDrive, &fxChorus, &fxDelay, &fxDelayTime, &fxReverb })
         s->setLookAndFeel (nullptr);
 }
 
@@ -158,7 +160,19 @@ AcidSynthAudioProcessorEditor::AcidSynthAudioProcessorEditor (AcidSynthAudioProc
     setupKnob (sat);
     setupKnob (sub);
     setupKnob (unison);
+    setupKnob (unisonSpread);
     setupKnob (gain);
+    setupKnob (lfo1Rate);
+    setupKnob (lfo2Rate);
+    setupKnob (modEnvDecay);
+    setupKnob (mod1Amount);
+    setupKnob (mod2Amount);
+    setupKnob (mod3Amount);
+    setupKnob (fxDrive);
+    setupKnob (fxChorus);
+    setupKnob (fxDelay);
+    setupKnob (fxDelayTime);
+    setupKnob (fxReverb);
 
     addAndMakeVisible (wave);
     addAndMakeVisible (cutoff);
@@ -171,7 +185,51 @@ AcidSynthAudioProcessorEditor::AcidSynthAudioProcessorEditor (AcidSynthAudioProc
     addAndMakeVisible (sat);
     addAndMakeVisible (sub);
     addAndMakeVisible (unison);
+    addAndMakeVisible (unisonSpread);
     addAndMakeVisible (gain);
+    addAndMakeVisible (lfo1Rate);
+    addAndMakeVisible (lfo2Rate);
+    addAndMakeVisible (modEnvDecay);
+    addAndMakeVisible (mod1Amount);
+    addAndMakeVisible (mod2Amount);
+    addAndMakeVisible (mod3Amount);
+    addAndMakeVisible (fxDrive);
+    addAndMakeVisible (fxChorus);
+    addAndMakeVisible (fxDelay);
+    addAndMakeVisible (fxDelayTime);
+    addAndMakeVisible (fxReverb);
+
+    for (auto* combo : { &mod1Source, &mod1Dest, &mod2Source, &mod2Dest, &mod3Source, &mod3Dest })
+    {
+        combo->setColour (juce::ComboBox::backgroundColourId, juce::Colour (0xff1b1b1b));
+        combo->setColour (juce::ComboBox::textColourId, juce::Colours::white.withAlpha (0.9f));
+        combo->setColour (juce::ComboBox::outlineColourId, juce::Colours::white.withAlpha (0.2f));
+        addAndMakeVisible (*combo);
+    }
+
+    auto addModItems = [] (juce::ComboBox& combo, const juce::StringArray& items)
+    {
+        for (int i = 0; i < items.size(); ++i)
+            combo.addItem (items[i], i + 1);
+    };
+
+    const juce::StringArray modSources { "Off", "LFO 1", "LFO 2", "Mod Env", "Velocity", "Aftertouch" };
+    const juce::StringArray modDests { "Off", "Cutoff", "Pitch", "Drive", "Gain", "Pan" };
+
+    addModItems (mod1Source, modSources);
+    addModItems (mod2Source, modSources);
+    addModItems (mod3Source, modSources);
+
+    addModItems (mod1Dest, modDests);
+    addModItems (mod2Dest, modDests);
+    addModItems (mod3Dest, modDests);
+
+    mod1Source.setTooltip ("Mod 1 Source");
+    mod1Dest.setTooltip ("Mod 1 Destination");
+    mod2Source.setTooltip ("Mod 2 Source");
+    mod2Dest.setTooltip ("Mod 2 Destination");
+    mod3Source.setTooltip ("Mod 3 Source");
+    mod3Dest.setTooltip ("Mod 3 Destination");
 
     // --- Keyboard
     addAndMakeVisible (keyboard);
@@ -195,14 +253,55 @@ AcidSynthAudioProcessorEditor::AcidSynthAudioProcessorEditor (AcidSynthAudioProc
     groupLeft.setText ("OSC", juce::dontSendNotification);
     groupMid.setText  ("FILTER", juce::dontSendNotification);
     groupRight.setText("AMP", juce::dontSendNotification);
+    groupExtra.setText("MIX", juce::dontSendNotification);
 
-    for (auto* gl : { &groupLeft, &groupMid, &groupRight })
+    for (auto* gl : { &groupLeft, &groupMid, &groupRight, &groupExtra })
     {
         gl->setJustificationType (juce::Justification::centred);
         gl->setFont (juce::Font (11.0f).withStyle (juce::Font::bold));
         gl->setColour (juce::Label::textColourId, juce::Colours::white.withAlpha (0.55f));
         gl->setInterceptsMouseClicks (false, false);
         addAndMakeVisible (*gl);
+    }
+
+    modHeaderLabel.setText ("MOD MATRIX", juce::dontSendNotification);
+    modHeaderLabel.setJustificationType (juce::Justification::centredLeft);
+    modHeaderLabel.setFont (juce::Font (11.0f).withStyle (juce::Font::bold));
+    modHeaderLabel.setColour (juce::Label::textColourId, juce::Colours::white.withAlpha (0.6f));
+    modHeaderLabel.setInterceptsMouseClicks (false, false);
+    addAndMakeVisible (modHeaderLabel);
+
+    fxHeaderLabel.setText ("FX + MOD SOURCES", juce::dontSendNotification);
+    fxHeaderLabel.setJustificationType (juce::Justification::centredLeft);
+    fxHeaderLabel.setFont (juce::Font (11.0f).withStyle (juce::Font::bold));
+    fxHeaderLabel.setColour (juce::Label::textColourId, juce::Colours::white.withAlpha (0.6f));
+    fxHeaderLabel.setInterceptsMouseClicks (false, false);
+    addAndMakeVisible (fxHeaderLabel);
+
+    modSourceHeader.setText ("SOURCE", juce::dontSendNotification);
+    modAmountHeader.setText ("AMOUNT", juce::dontSendNotification);
+    modDestHeader.setText ("DEST", juce::dontSendNotification);
+
+    for (auto* header : { &modSourceHeader, &modAmountHeader, &modDestHeader })
+    {
+        header->setJustificationType (juce::Justification::centred);
+        header->setFont (juce::Font (10.0f).withStyle (juce::Font::bold));
+        header->setColour (juce::Label::textColourId, juce::Colours::white.withAlpha (0.5f));
+        header->setInterceptsMouseClicks (false, false);
+        addAndMakeVisible (*header);
+    }
+
+    modRow1Label.setText ("MOD 1", juce::dontSendNotification);
+    modRow2Label.setText ("MOD 2", juce::dontSendNotification);
+    modRow3Label.setText ("MOD 3", juce::dontSendNotification);
+
+    for (auto* rowLabel : { &modRow1Label, &modRow2Label, &modRow3Label })
+    {
+        rowLabel->setJustificationType (juce::Justification::centredLeft);
+        rowLabel->setFont (juce::Font (11.0f).withStyle (juce::Font::bold));
+        rowLabel->setColour (juce::Label::textColourId, juce::Colours::white.withAlpha (0.7f));
+        rowLabel->setInterceptsMouseClicks (false, false);
+        addAndMakeVisible (*rowLabel);
     }
 
     // --- Knob labels
@@ -219,12 +318,35 @@ AcidSynthAudioProcessorEditor::AcidSynthAudioProcessorEditor (AcidSynthAudioProc
     setupLabel (satLabel,    "SAT");
     setupLabel (subLabel,    "SUB");
     setupLabel (unisonLabel, "UNISON");
+    setupLabel (unisonSpreadLabel, "SPREAD");
     setupLabel (gainLabel,   "GAIN");
+    setupLabel (lfo1RateLabel, "LFO 1 RATE");
+    setupLabel (lfo2RateLabel, "LFO 2 RATE");
+    setupLabel (modEnvDecayLabel, "MOD ENV");
+    setupLabel (mod1AmountLabel, "AMOUNT");
+    setupLabel (mod2AmountLabel, "AMOUNT");
+    setupLabel (mod3AmountLabel, "AMOUNT");
+    setupLabel (fxDriveLabel, "DRIVE");
+    setupLabel (fxChorusLabel, "CHORUS");
+    setupLabel (fxDelayLabel, "DELAY");
+    setupLabel (fxDelayTimeLabel, "TIME");
+    setupLabel (fxReverbLabel, "REVERB");
+
+    mod1AmountLabel.setVisible (false);
+    mod2AmountLabel.setVisible (false);
+    mod3AmountLabel.setVisible (false);
 
     for (auto* l : { &waveValueLabel, &cutoffValueLabel, &resValueLabel, &envmodValueLabel, &decayValueLabel,
                      &accentValueLabel, &glideValueLabel, &driveValueLabel, &satValueLabel, &subValueLabel,
-                     &unisonValueLabel, &gainValueLabel })
+                     &unisonValueLabel, &unisonSpreadValueLabel, &gainValueLabel, &lfo1RateValueLabel,
+                     &lfo2RateValueLabel, &modEnvDecayValueLabel, &mod1AmountValueLabel, &mod2AmountValueLabel,
+                     &mod3AmountValueLabel, &fxDriveValueLabel, &fxChorusValueLabel, &fxDelayValueLabel,
+                     &fxDelayTimeValueLabel, &fxReverbValueLabel })
         setupValueLabel (*l);
+
+    mod1AmountValueLabel.setVisible (false);
+    mod2AmountValueLabel.setVisible (false);
+    mod3AmountValueLabel.setVisible (false);
 
     // --- Attachments (unchanged)
     auto& apvts = processor.apvts;
@@ -239,10 +361,34 @@ AcidSynthAudioProcessorEditor::AcidSynthAudioProcessorEditor (AcidSynthAudioProc
     aSat    = std::make_unique<Attachment> (apvts, "sat",    sat);
     aSub    = std::make_unique<Attachment> (apvts, "sub",    sub);
     aUnison = std::make_unique<Attachment> (apvts, "unison", unison);
+    aUnisonSpread = std::make_unique<Attachment> (apvts, "unisonSpread", unisonSpread);
     aGain   = std::make_unique<Attachment> (apvts, "gain",   gain);
 
+    aLfo1Rate = std::make_unique<Attachment> (apvts, "lfo1Rate", lfo1Rate);
+    aLfo2Rate = std::make_unique<Attachment> (apvts, "lfo2Rate", lfo2Rate);
+    aModEnvDecay = std::make_unique<Attachment> (apvts, "modEnvDecay", modEnvDecay);
+
+    aMod1Amount = std::make_unique<Attachment> (apvts, "mod1Amount", mod1Amount);
+    aMod2Amount = std::make_unique<Attachment> (apvts, "mod2Amount", mod2Amount);
+    aMod3Amount = std::make_unique<Attachment> (apvts, "mod3Amount", mod3Amount);
+
+    aFxDrive = std::make_unique<Attachment> (apvts, "fxDrive", fxDrive);
+    aFxChorus = std::make_unique<Attachment> (apvts, "fxChorus", fxChorus);
+    aFxDelay = std::make_unique<Attachment> (apvts, "fxDelay", fxDelay);
+    aFxDelayTime = std::make_unique<Attachment> (apvts, "fxDelayTime", fxDelayTime);
+    aFxReverb = std::make_unique<Attachment> (apvts, "fxReverb", fxReverb);
+
+    aMod1Source = std::make_unique<ComboAttachment> (apvts, "mod1Source", mod1Source);
+    aMod1Dest = std::make_unique<ComboAttachment> (apvts, "mod1Dest", mod1Dest);
+    aMod2Source = std::make_unique<ComboAttachment> (apvts, "mod2Source", mod2Source);
+    aMod2Dest = std::make_unique<ComboAttachment> (apvts, "mod2Dest", mod2Dest);
+    aMod3Source = std::make_unique<ComboAttachment> (apvts, "mod3Source", mod3Source);
+    aMod3Dest = std::make_unique<ComboAttachment> (apvts, "mod3Dest", mod3Dest);
+
     // --- Double-click reset
-    for (auto* s : { &wave, &cutoff, &res, &envmod, &decay, &accent, &glide, &drive, &sat, &sub, &unison, &gain })
+    for (auto* s : { &wave, &cutoff, &res, &envmod, &decay, &accent, &glide, &drive, &sat, &sub, &unison,
+                     &unisonSpread, &gain, &lfo1Rate, &lfo2Rate, &modEnvDecay, &mod1Amount, &mod2Amount, &mod3Amount,
+                     &fxDrive, &fxChorus, &fxDelay, &fxDelayTime, &fxReverb })
         s->setDoubleClickReturnValue (true, s->getValue());
 
     // --- Readout wiring
@@ -257,7 +403,19 @@ AcidSynthAudioProcessorEditor::AcidSynthAudioProcessorEditor (AcidSynthAudioProc
     satValueLabel.setText (formatValue (sat), juce::dontSendNotification);
     subValueLabel.setText (formatValue (sub), juce::dontSendNotification);
     unisonValueLabel.setText (formatValue (unison), juce::dontSendNotification);
+    unisonSpreadValueLabel.setText (formatValue (unisonSpread), juce::dontSendNotification);
     gainValueLabel.setText (formatValue (gain), juce::dontSendNotification);
+    lfo1RateValueLabel.setText (formatValue (lfo1Rate), juce::dontSendNotification);
+    lfo2RateValueLabel.setText (formatValue (lfo2Rate), juce::dontSendNotification);
+    modEnvDecayValueLabel.setText (formatValue (modEnvDecay), juce::dontSendNotification);
+    mod1AmountValueLabel.setText (formatValue (mod1Amount), juce::dontSendNotification);
+    mod2AmountValueLabel.setText (formatValue (mod2Amount), juce::dontSendNotification);
+    mod3AmountValueLabel.setText (formatValue (mod3Amount), juce::dontSendNotification);
+    fxDriveValueLabel.setText (formatValue (fxDrive), juce::dontSendNotification);
+    fxChorusValueLabel.setText (formatValue (fxChorus), juce::dontSendNotification);
+    fxDelayValueLabel.setText (formatValue (fxDelay), juce::dontSendNotification);
+    fxDelayTimeValueLabel.setText (formatValue (fxDelayTime), juce::dontSendNotification);
+    fxReverbValueLabel.setText (formatValue (fxReverb), juce::dontSendNotification);
 
     wireReadout (wave,   "WAVE",   waveValueLabel);
     wireReadout (cutoff, "CUTOFF", cutoffValueLabel);
@@ -270,11 +428,23 @@ AcidSynthAudioProcessorEditor::AcidSynthAudioProcessorEditor (AcidSynthAudioProc
     wireReadout (sat,    "SAT",    satValueLabel);
     wireReadout (sub,    "SUB",    subValueLabel);
     wireReadout (unison, "UNISON", unisonValueLabel);
+    wireReadout (unisonSpread, "SPREAD", unisonSpreadValueLabel);
     wireReadout (gain,   "GAIN",   gainValueLabel);
+    wireReadout (lfo1Rate, "LFO 1 RATE", lfo1RateValueLabel);
+    wireReadout (lfo2Rate, "LFO 2 RATE", lfo2RateValueLabel);
+    wireReadout (modEnvDecay, "MOD ENV", modEnvDecayValueLabel);
+    wireReadout (mod1Amount, "MOD 1 AMT", mod1AmountValueLabel);
+    wireReadout (mod2Amount, "MOD 2 AMT", mod2AmountValueLabel);
+    wireReadout (mod3Amount, "MOD 3 AMT", mod3AmountValueLabel);
+    wireReadout (fxDrive, "FX DRIVE", fxDriveValueLabel);
+    wireReadout (fxChorus, "CHORUS", fxChorusValueLabel);
+    wireReadout (fxDelay, "DELAY", fxDelayValueLabel);
+    wireReadout (fxDelayTime, "DELAY TIME", fxDelayTimeValueLabel);
+    wireReadout (fxReverb, "REVERB", fxReverbValueLabel);
 
     updateReadout ("CUTOFF", cutoff);
 
-    setSize (760, 420);
+    setSize (1020, 600);
 }
 
 //==============================================================================
@@ -294,16 +464,19 @@ void AcidSynthAudioProcessorEditor::paint (juce::Graphics& g)
     g.setColour (juce::Colours::white.withAlpha (0.12f));
     g.drawLine (0.0f, (float) topBar.getBottom(), (float) getWidth(), (float) topBar.getBottom(), 1.0f);
 
-    // Knob panel background
+    // Panels
     auto content = bounds.reduced (10);
     auto keyboardStrip = content.removeFromBottom (100);
-
+    auto modFxPanel = content.removeFromBottom (190);
     auto knobPanel = content;
+
     g.setColour (juce::Colours::white.withAlpha (0.05f));
     g.fillRoundedRectangle (knobPanel.toFloat(), 10.0f);
+    g.fillRoundedRectangle (modFxPanel.toFloat(), 10.0f);
 
     g.setColour (juce::Colours::white.withAlpha (0.10f));
     g.drawRoundedRectangle (knobPanel.toFloat(), 10.0f, 1.0f);
+    g.drawRoundedRectangle (modFxPanel.toFloat(), 10.0f, 1.0f);
 
     // Keyboard strip divider
     g.setColour (juce::Colours::white.withAlpha (0.12f));
@@ -332,17 +505,14 @@ void AcidSynthAudioProcessorEditor::resized()
     auto keyboardArea = content.removeFromBottom (100);
     keyboard.setBounds (keyboardArea.reduced (0, 8));
 
+    // Mod/FX panel area
+    auto modFxPanel = content.removeFromBottom (190);
+
     // Knob panel area
-    auto gridArea = content;
-
-    // Inner padding for the panel
-    gridArea = gridArea.reduced (18, 14);
-
-    // Reserve header strip above the 3 columns for group labels
+    auto gridArea = content.reduced (18, 14);
     auto groupHeader = gridArea.removeFromTop (16);
 
-    // 3 columns
-    const int cols = 3;
+    const int cols = 4;
     const int rows = 4;
 
     const int cellW = gridArea.getWidth() / cols;
@@ -356,43 +526,141 @@ void AcidSynthAudioProcessorEditor::resized()
     };
 
     // Group header labels aligned with columns
-    groupLeft .setBounds (juce::Rectangle<int> (groupHeader.getX() + 0 * (gridArea.getWidth() / 3), groupHeader.getY(),
-                                               gridArea.getWidth() / 3, groupHeader.getHeight()));
-    groupMid  .setBounds (juce::Rectangle<int> (groupHeader.getX() + 1 * (gridArea.getWidth() / 3), groupHeader.getY(),
-                                               gridArea.getWidth() / 3, groupHeader.getHeight()));
-    groupRight.setBounds (juce::Rectangle<int> (groupHeader.getX() + 2 * (gridArea.getWidth() / 3), groupHeader.getY(),
-                                               gridArea.getWidth() / 3, groupHeader.getHeight()));
+    groupLeft .setBounds (juce::Rectangle<int> (groupHeader.getX() + 0 * (gridArea.getWidth() / cols), groupHeader.getY(),
+                                               gridArea.getWidth() / cols, groupHeader.getHeight()));
+    groupMid  .setBounds (juce::Rectangle<int> (groupHeader.getX() + 1 * (gridArea.getWidth() / cols), groupHeader.getY(),
+                                               gridArea.getWidth() / cols, groupHeader.getHeight()));
+    groupRight.setBounds (juce::Rectangle<int> (groupHeader.getX() + 2 * (gridArea.getWidth() / cols), groupHeader.getY(),
+                                               gridArea.getWidth() / cols, groupHeader.getHeight()));
+    groupExtra.setBounds (juce::Rectangle<int> (groupHeader.getX() + 3 * (gridArea.getWidth() / cols), groupHeader.getY(),
+                                               gridArea.getWidth() / cols, groupHeader.getHeight()));
 
     // Helper: place a label + knob inside a cell
     auto place = [&](juce::Label& lbl, juce::Slider& s, juce::Label& valueLabel, int col, int row)
     {
         auto cell = cellRect (col, row);
 
-        // label strip
         auto labelArea = cell.removeFromTop (14);
         lbl.setBounds (labelArea);
 
         auto valueArea = cell.removeFromBottom (14);
         valueLabel.setBounds (valueArea);
 
-        // knob gets the rest
         s.setBounds (cell);
     };
 
-    // 3x4 placements
+    // 4x4 placements
     place (waveLabel,   wave,   waveValueLabel,   0, 0);
     place (cutoffLabel, cutoff, cutoffValueLabel, 1, 0);
     place (resLabel,    res,    resValueLabel,    2, 0);
+    place (envmodLabel, envmod, envmodValueLabel, 3, 0);
 
-    place (envmodLabel, envmod, envmodValueLabel, 0, 1);
-    place (decayLabel,  decay,  decayValueLabel,  1, 1);
-    place (accentLabel, accent, accentValueLabel, 2, 1);
+    place (decayLabel,  decay,  decayValueLabel,  0, 1);
+    place (accentLabel, accent, accentValueLabel, 1, 1);
+    place (glideLabel,  glide,  glideValueLabel,  2, 1);
+    place (driveLabel,  drive,  driveValueLabel,  3, 1);
 
-    place (glideLabel,  glide,  glideValueLabel,  0, 2);
-    place (driveLabel,  drive,  driveValueLabel,  1, 2);
-    place (satLabel,    sat,    satValueLabel,    2, 2);
+    place (satLabel,    sat,    satValueLabel,    0, 2);
+    place (subLabel,    sub,    subValueLabel,    1, 2);
+    place (unisonLabel, unison, unisonValueLabel, 2, 2);
+    place (unisonSpreadLabel, unisonSpread, unisonSpreadValueLabel, 3, 2);
 
-    place (subLabel,    sub,    subValueLabel,    0, 3);
-    place (unisonLabel, unison, unisonValueLabel, 1, 3);
-    place (gainLabel,   gain,   gainValueLabel,   2, 3);
+    place (gainLabel,   gain,   gainValueLabel,   0, 3);
+
+    // Mod/FX panel layout
+    auto modFxArea = modFxPanel.reduced (18, 12);
+    auto modArea = modFxArea.removeFromLeft (int (modFxArea.getWidth() * 0.62f));
+    auto fxArea = modFxArea;
+
+    auto modHeader = modArea.removeFromTop (18);
+    modHeaderLabel.setBounds (modHeader);
+
+    auto modColumnHeader = modArea.removeFromTop (14);
+
+    const int rowLabelWidth = 52;
+    const int gap = 8;
+    const int available = modArea.getWidth() - rowLabelWidth - gap * 3;
+    const int sourceWidth = (int) (available * 0.38f);
+    const int amountWidth = (int) (available * 0.24f);
+    const int destWidth = available - sourceWidth - amountWidth;
+
+    modSourceHeader.setBounds (modColumnHeader.getX() + rowLabelWidth + gap,
+                               modColumnHeader.getY(),
+                               sourceWidth,
+                               modColumnHeader.getHeight());
+    modAmountHeader.setBounds (modSourceHeader.getRight() + gap,
+                               modColumnHeader.getY(),
+                               amountWidth,
+                               modColumnHeader.getHeight());
+    modDestHeader.setBounds (modAmountHeader.getRight() + gap,
+                             modColumnHeader.getY(),
+                             destWidth,
+                             modColumnHeader.getHeight());
+
+    const int modRowHeight = modArea.getHeight() / 3;
+    auto modRow = [&] (juce::Label& rowLabel, juce::ComboBox& source, juce::Slider& amount, juce::ComboBox& dest)
+    {
+        auto rowArea = modArea.removeFromTop (modRowHeight).reduced (0, 6);
+        rowLabel.setBounds (rowArea.removeFromLeft (rowLabelWidth));
+        rowArea.removeFromLeft (gap);
+
+        source.setBounds (rowArea.removeFromLeft (sourceWidth));
+        rowArea.removeFromLeft (gap);
+
+        amount.setBounds (rowArea.removeFromLeft (amountWidth));
+        rowArea.removeFromLeft (gap);
+
+        dest.setBounds (rowArea.removeFromLeft (destWidth));
+    };
+
+    modRow (modRow1Label, mod1Source, mod1Amount, mod1Dest);
+    modRow (modRow2Label, mod2Source, mod2Amount, mod2Dest);
+    modRow (modRow3Label, mod3Source, mod3Amount, mod3Dest);
+
+    auto fxHeader = fxArea.removeFromTop (18);
+    fxHeaderLabel.setBounds (fxHeader);
+
+    auto fxSourcesArea = fxArea.removeFromTop (80);
+    fxSourcesArea = fxSourcesArea.reduced (6, 4);
+    const int fxSourceCellW = fxSourcesArea.getWidth() / 3;
+    auto fxSourceCell = [&](juce::Label& lbl, juce::Slider& s, juce::Label& valueLabel, int col)
+    {
+        auto cell = juce::Rectangle<int> (fxSourcesArea.getX() + col * fxSourceCellW,
+                                          fxSourcesArea.getY(),
+                                          fxSourceCellW,
+                                          fxSourcesArea.getHeight()).reduced (6, 0);
+        auto labelArea = cell.removeFromTop (14);
+        lbl.setBounds (labelArea);
+        auto valueArea = cell.removeFromBottom (14);
+        valueLabel.setBounds (valueArea);
+        s.setBounds (cell);
+    };
+
+    fxSourceCell (lfo1RateLabel, lfo1Rate, lfo1RateValueLabel, 0);
+    fxSourceCell (lfo2RateLabel, lfo2Rate, lfo2RateValueLabel, 1);
+    fxSourceCell (modEnvDecayLabel, modEnvDecay, modEnvDecayValueLabel, 2);
+
+    auto fxControlsArea = fxArea.reduced (6, 8);
+    const int fxCols = 3;
+    const int fxRows = 2;
+    const int fxCellW = fxControlsArea.getWidth() / fxCols;
+    const int fxCellH = fxControlsArea.getHeight() / fxRows;
+
+    auto fxCell = [&](juce::Label& lbl, juce::Slider& s, juce::Label& valueLabel, int col, int row)
+    {
+        auto cell = juce::Rectangle<int> (fxControlsArea.getX() + col * fxCellW,
+                                          fxControlsArea.getY() + row * fxCellH,
+                                          fxCellW, fxCellH).reduced (8, 6);
+        auto labelArea = cell.removeFromTop (14);
+        lbl.setBounds (labelArea);
+        auto valueArea = cell.removeFromBottom (14);
+        valueLabel.setBounds (valueArea);
+        s.setBounds (cell);
+    };
+
+    fxCell (fxDriveLabel, fxDrive, fxDriveValueLabel, 0, 0);
+    fxCell (fxChorusLabel, fxChorus, fxChorusValueLabel, 1, 0);
+    fxCell (fxDelayLabel, fxDelay, fxDelayValueLabel, 2, 0);
+    fxCell (fxDelayTimeLabel, fxDelayTime, fxDelayTimeValueLabel, 0, 1);
+    fxCell (fxReverbLabel, fxReverb, fxReverbValueLabel, 1, 1);
 }

@@ -1,5 +1,6 @@
 #pragma once
 #include <JuceHeader.h>
+#include <array>
 
 //==============================================================================
 // Minimal mono "acid voice" with ladder-ish resonant 4-pole filter.
@@ -16,17 +17,22 @@ public:
         phaseUnisonA = 0.0f;
         phaseUnisonB = 0.0f;
         phaseSub = 0.0f;
+        lfo1Phase = 0.0f;
+        lfo2Phase = 0.0f;
         env = 0.0f;
         envCoef = 0.0f;
+        modEnv = 0.0f;
+        modEnvCoef = 0.0f;
 
         targetFreq  = 110.0f;
         currentFreq = 110.0f;
         gate = false;
         vel  = 0.0f;
+        aftertouch = 0.0f;
 
         // filter state
-        z1 = z2 = z3 = z4 = 0.0f;
-        lastY = 0.0f;
+        filterL = {};
+        filterR = {};
 
         // legacy lp not used anymore, but keep zeroed in case you referenced it elsewhere
         lp = 0.0f;
@@ -35,7 +41,7 @@ public:
     void setParams (float waveIn, float cutoffIn, float resIn, float envmodIn,
                     float decayIn, float accentIn, float glideMsIn,
                     float driveIn, float satIn, float subMixIn,
-                    float unisonIn, float gainIn)
+                    float unisonIn, float unisonSpreadIn, float gainIn)
     {
         wave    = waveIn;
         cutoff  = cutoffIn;     // Hz
@@ -48,11 +54,35 @@ public:
         sat     = satIn;        // 0..1
         subMix  = subMixIn;     // 0..1
         unison  = unisonIn;     // 0..1
+        unisonSpread = unisonSpreadIn; // 0..1
         gain    = gainIn;       // linear
 
         // simple exponential decay envelope coefficient
         const float d = juce::jmax (0.001f, decay);
         envCoef = std::exp (-1.0f / (sr * d));
+    }
+
+    void setModMatrix (int src1, int dst1, float amt1,
+                       int src2, int dst2, float amt2,
+                       int src3, int dst3, float amt3,
+                       float lfo1RateIn, float lfo2RateIn,
+                       float modEnvDecayIn)
+    {
+        slots[0] = { src1, dst1, amt1 };
+        slots[1] = { src2, dst2, amt2 };
+        slots[2] = { src3, dst3, amt3 };
+
+        lfo1Rate = lfo1RateIn;
+        lfo2Rate = lfo2RateIn;
+        modEnvDecay = modEnvDecayIn;
+
+        const float d = juce::jmax (0.01f, modEnvDecay);
+        modEnvCoef = std::exp (-1.0f / (sr * d));
+    }
+
+    void setAftertouch (float pressure)
+    {
+        aftertouch = juce::jlimit (0.0f, 1.0f, pressure);
     }
 
     void noteOn (int midiNote, float velocity)
@@ -61,6 +91,7 @@ public:
         vel = juce::jlimit (0.0f, 1.0f, velocity);
         targetFreq = juce::MidiMessage::getMidiNoteInHertz (midiNote);
         env = 1.0f; // instant attack for now
+        modEnv = 1.0f;
     }
 
     void noteOff (int /*midiNote*/)
@@ -73,25 +104,75 @@ public:
     {
         gate = false;
         env = 0.0f;
+        modEnv = 0.0f;
 
         phase = 0.0f;
         phaseUnisonA = 0.0f;
         phaseUnisonB = 0.0f;
         phaseSub = 0.0f;
 
-        z1 = z2 = z3 = z4 = 0.0f;
-        lastY = 0.0f;
+        filterL = {};
+        filterR = {};
     }
 
-    float render()
+    std::array<float, 2> renderStereo()
     {
         // --- glide (as in your original code) ---
         const float glideSec  = juce::jmax (0.0f, glideMs) * 0.001f;
         const float glideCoef = (glideSec <= 0.0f) ? 0.0f : std::exp (-1.0f / (sr * glideSec));
         currentFreq = glideCoef * currentFreq + (1.0f - glideCoef) * targetFreq;
 
+        // --- modulation sources ---
+        lfo1Phase += lfo1Rate / sr;
+        lfo2Phase += lfo2Rate / sr;
+        if (lfo1Phase >= 1.0f) lfo1Phase -= 1.0f;
+        if (lfo2Phase >= 1.0f) lfo2Phase -= 1.0f;
+
+        const float lfo1 = std::sin (juce::MathConstants<float>::twoPi * lfo1Phase);
+        const float lfo2 = std::sin (juce::MathConstants<float>::twoPi * (lfo2Phase + 0.25f));
+
+        // --- envelope decay ---
+        env *= envCoef;
+        modEnv *= modEnvCoef;
+
+        float modCutoff = 0.0f;
+        float modPitch = 0.0f;
+        float modDrive = 0.0f;
+        float modGain = 0.0f;
+        float modPan = 0.0f;
+
+        for (const auto& slot : slots)
+        {
+            const float source = getSourceValue (slot.source, lfo1, lfo2);
+            const float amount = slot.amount;
+
+            switch (slot.dest)
+            {
+                case 1: // Cutoff
+                    modCutoff += source * amount * 6000.0f;
+                    break;
+                case 2: // Pitch
+                    modPitch += source * amount * 12.0f;
+                    break;
+                case 3: // Drive
+                    modDrive += source * amount * 0.45f;
+                    break;
+                case 4: // Gain
+                    modGain += source * amount * 0.5f;
+                    break;
+                case 5: // Pan
+                    modPan += source * amount;
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        const float pitchRatio = std::pow (2.0f, modPitch / 12.0f);
+        const float modulatedFreq = currentFreq * pitchRatio;
+
         // --- oscillator: saw -> square morph (same idea as before) ---
-        phase += currentFreq / sr;
+        phase += modulatedFreq / sr;
         if (phase >= 1.0f) phase -= 1.0f;
 
         auto renderWave = [this] (float p)
@@ -104,43 +185,34 @@ public:
         float oscMain = renderWave (phase);
 
         const float unisonAmt = juce::jlimit (0.0f, 1.0f, unison);
-        float osc = oscMain;
+        float oscA = 0.0f;
+        float oscB = 0.0f;
 
         if (unisonAmt > 0.0001f)
         {
             const float detuneCents = 7.0f + 25.0f * unisonAmt;
             const float detuneRatio = std::pow (2.0f, detuneCents / 1200.0f);
 
-            phaseUnisonA += (currentFreq * detuneRatio) / sr;
-            phaseUnisonB += (currentFreq / detuneRatio) / sr;
+            phaseUnisonA += (modulatedFreq * detuneRatio) / sr;
+            phaseUnisonB += (modulatedFreq / detuneRatio) / sr;
 
             if (phaseUnisonA >= 1.0f) phaseUnisonA -= 1.0f;
             if (phaseUnisonB >= 1.0f) phaseUnisonB -= 1.0f;
 
-            const float oscA = renderWave (phaseUnisonA);
-            const float oscB = renderWave (phaseUnisonB);
-
-            const float mainWeight = 1.0f - 0.35f * unisonAmt;
-            const float sideWeight = 0.175f * unisonAmt;
-            osc = mainWeight * oscMain + sideWeight * (oscA + oscB);
+            oscA = renderWave (phaseUnisonA);
+            oscB = renderWave (phaseUnisonB);
         }
 
         const float subAmt = juce::jlimit (0.0f, 1.0f, subMix);
         if (subAmt > 0.0001f)
         {
-            phaseSub += (currentFreq * 0.5f) / sr;
+            phaseSub += (modulatedFreq * 0.5f) / sr;
             if (phaseSub >= 1.0f) phaseSub -= 1.0f;
-
-            const float sub = std::sin (juce::MathConstants<float>::twoPi * phaseSub);
-            osc += subAmt * 0.8f * sub;
         }
-
-        // --- envelope decay ---
-        env *= envCoef;
 
         // --- cutoff with envelope modulation (keep your behavior) ---
         // envmod maps to an added cutoff range. Tune this later if you want.
-        float fc = cutoff + envmod * 8000.0f * env;
+        float fc = cutoff + envmod * 8000.0f * env + modCutoff;
         fc = juce::jlimit (20.0f, 18000.0f, fc);
 
         // --- Ladder-ish resonant 4-pole filter ---
@@ -155,42 +227,60 @@ public:
         k *= (1.0f - 0.25f * g);
 
         // Drive: pre-gain into the ladder core
-        const float pre = 1.0f + 6.0f * juce::jlimit (0.0f, 1.0f, drive);
-        float u = osc * pre;
+        float driveAmt = juce::jlimit (0.0f, 1.0f, drive + modDrive);
+        const float pre = 1.0f + 6.0f * driveAmt;
 
-        // feedback (use last output)
-        u -= k * lastY;
+        float oscLeft = 0.0f;
+        float oscRight = 0.0f;
 
-        // soft clip in the loop for stability + character
-        u = softClip (u);
+        const float basePan = juce::jlimit (-1.0f, 1.0f, modPan);
+        const float spread = juce::jlimit (0.0f, 1.0f, unisonSpread) * (0.35f + 0.65f * unisonAmt);
 
-        // 4 cascaded one-poles (24 dB-ish)
-        z1 += g * (u  - z1);
-        z2 += g * (z1 - z2);
-        z3 += g * (z2 - z3);
-        z4 += g * (z3 - z4);
+        const float mainWeight = 1.0f - 0.35f * unisonAmt;
+        const float sideWeight = 0.175f * unisonAmt;
 
-        float y = z4;
-        lastY = y;
+        addPanned (oscLeft, oscRight, oscMain * mainWeight, basePan);
+
+        if (unisonAmt > 0.0001f)
+        {
+            addPanned (oscLeft, oscRight, oscA * sideWeight, basePan - spread);
+            addPanned (oscLeft, oscRight, oscB * sideWeight, basePan + spread);
+        }
+
+        if (subAmt > 0.0001f)
+        {
+            const float sub = std::sin (juce::MathConstants<float>::twoPi * phaseSub);
+            addPanned (oscLeft, oscRight, subAmt * 0.8f * sub, basePan);
+        }
+
+        float left = processFilter (oscLeft * pre, k, g, filterL);
+        float right = processFilter (oscRight * pre, k, g, filterR);
 
         // optional output saturation (kept from your original "drive coloration")
-        y = std::tanh (y);
+        left = std::tanh (left);
+        right = std::tanh (right);
 
         // post-filter drive stage for extra power
         const float satAmt = juce::jlimit (0.0f, 1.0f, sat);
         if (satAmt > 0.0001f)
-            y = softClip (y * (1.0f + 8.0f * satAmt));
+        {
+            left = softClip (left * (1.0f + 8.0f * satAmt));
+            right = softClip (right * (1.0f + 8.0f * satAmt));
+        }
 
         // accent boosts volume a bit based on velocity (same as before)
         const float acc = 1.0f + accent * 0.6f * (vel > 0.7f ? 1.0f : 0.0f);
 
-        // final amp
-        y *= env * acc * gain;
+        float outGain = juce::jlimit (0.0f, 2.0f, gain + modGain);
+
+        left *= env * acc * outGain;
+        right *= env * acc * outGain;
 
         // avoid denormals
-        if (std::abs (y) < 1e-12f) y = 0.0f;
+        if (std::abs (left) < 1e-12f) left = 0.0f;
+        if (std::abs (right) < 1e-12f) right = 0.0f;
 
-        return y;
+        return { left, right };
     }
 
 private:
@@ -201,6 +291,61 @@ private:
         return v / (1.0f + a * std::abs (v));
     }
 
+    struct FilterState
+    {
+        float z1 = 0.0f;
+        float z2 = 0.0f;
+        float z3 = 0.0f;
+        float z4 = 0.0f;
+        float lastY = 0.0f;
+    };
+
+    struct ModSlot
+    {
+        int source = 0;
+        int dest = 0;
+        float amount = 0.0f;
+    };
+
+    float getSourceValue (int sourceId, float lfo1, float lfo2) const
+    {
+        switch (sourceId)
+        {
+            case 1: return lfo1;
+            case 2: return lfo2;
+            case 3: return modEnv;
+            case 4: return vel;
+            case 5: return aftertouch;
+            default: return 0.0f;
+        }
+    }
+
+    static inline void addPanned (float& left, float& right, float value, float pan)
+    {
+        const float clamped = juce::jlimit (-1.0f, 1.0f, pan);
+        const float angle = (clamped + 1.0f) * 0.25f * juce::MathConstants<float>::pi;
+        const float gL = std::cos (angle);
+        const float gR = std::sin (angle);
+        left += value * gL;
+        right += value * gR;
+    }
+
+    static inline float processFilter (float input, float k, float g, FilterState& state)
+    {
+        float u = input;
+        u -= k * state.lastY;
+        u = softClip (u);
+
+        state.z1 += g * (u  - state.z1);
+        state.z2 += g * (state.z1 - state.z2);
+        state.z3 += g * (state.z2 - state.z3);
+        state.z4 += g * (state.z3 - state.z4);
+
+        float y = state.z4;
+        state.lastY = y;
+        return y;
+    }
+
     // --- common voice state ---
     float sr = 44100.0f;
 
@@ -208,15 +353,20 @@ private:
     float phaseUnisonA = 0.0f;
     float phaseUnisonB = 0.0f;
     float phaseSub = 0.0f;
+    float lfo1Phase = 0.0f;
+    float lfo2Phase = 0.0f;
 
     float env = 0.0f;
     float envCoef = 0.0f;
+    float modEnv = 0.0f;
+    float modEnvCoef = 0.0f;
 
     float targetFreq  = 110.0f;
     float currentFreq = 110.0f;
 
     bool  gate = false;
     float vel  = 0.0f;
+    float aftertouch = 0.0f;
 
     // --- params (set via setParams) ---
     float wave    = 0.0f;     // 0..1
@@ -230,11 +380,17 @@ private:
     float sat     = 0.0f;     // 0..1
     float subMix  = 0.0f;     // 0..1
     float unison  = 0.0f;     // 0..1
+    float unisonSpread = 0.0f; // 0..1
     float gain    = 0.2f;     // linear
 
+    float lfo1Rate = 0.5f;
+    float lfo2Rate = 1.25f;
+    float modEnvDecay = 0.3f;
+    std::array<ModSlot, 3> slots {};
+
     // --- filter state (ladder-ish) ---
-    float z1 = 0.0f, z2 = 0.0f, z3 = 0.0f, z4 = 0.0f;
-    float lastY = 0.0f;
+    FilterState filterL;
+    FilterState filterR;
 
     // kept from your original code (not used now, but harmless)
     float lp = 0.0f;
@@ -291,5 +447,11 @@ public:
     AcidVoice voice;
 
 private:
+    juce::dsp::Chorus<float> chorus;
+    juce::dsp::DelayLine<float, juce::dsp::DelayLineInterpolationTypes::Linear> delayLineL { 192000 };
+    juce::dsp::DelayLine<float, juce::dsp::DelayLineInterpolationTypes::Linear> delayLineR { 192000 };
+    juce::Reverb reverb;
+    float currentAftertouch = 0.0f;
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AcidSynthAudioProcessor)
 };
