@@ -12,10 +12,10 @@ void AcidSynthAudioProcessorEditor::setupKnob (juce::Slider& s)
 
     // Better feel: velocity mode makes rotary control smoother/more "plugin-like"
     s.setVelocityBasedMode (true);
-    s.setVelocityModeParameters (0.7, 1, 0.05, true);
+    s.setVelocityModeParameters (0.95, 1, 0.05, true);
 
-    // Longer drag distance for finer control on mouse/trackpad
-    s.setMouseDragSensitivity (200);
+    // Shorter drag distance for faster adjustments on mouse/trackpad
+    s.setMouseDragSensitivity (110);
 
     // Mouse wheel tweaks
     s.setScrollWheelEnabled (true);
