@@ -36,6 +36,9 @@ juce::AudioProcessorValueTreeState::ParameterLayout AcidSynthAudioProcessor::cre
     p.push_back (std::make_unique<AudioParameterFloat> ("res",    "Resonance",
                                                         NormalisableRange<float>(0.0f, 0.995f), 0.35f));
 
+    p.push_back (std::make_unique<AudioParameterChoice> ("filterChar", "Filter Character",
+                                                         StringArray { "Classic 303", "Clean Ladder", "Aggressive", "Modern", "Screech" }, 0));
+
     p.push_back (std::make_unique<AudioParameterFloat> ("envmod", "Env Mod",
                                                         NormalisableRange<float>(0.0f, 1.0f), 0.75f));
 
@@ -151,6 +154,7 @@ void AcidSynthAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, ju
     const float wave   = getParam (apvts, "wave");
     const float cutoff = getParam (apvts, "cutoff");
     const float res    = getParam (apvts, "res");
+    const int filterChar = (int) getParam (apvts, "filterChar");
     const float envmod = getParam (apvts, "envmod");
     const float decay  = getParam (apvts, "decay");
     const float accent = getParam (apvts, "accent");
@@ -184,7 +188,7 @@ void AcidSynthAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, ju
     const float fxDelayTime = getParam (apvts, "fxDelayTime");
     const float fxReverb = getParam (apvts, "fxReverb");
 
-    voice.setParams (wave, cutoff, res, envmod, decay, accent, glide, drive, sat, subMix, unison, unisonSpread, gain);
+    voice.setParams (wave, cutoff, res, envmod, decay, accent, glide, drive, sat, subMix, unison, unisonSpread, gain, filterChar);
     voice.setModMatrix (mod1Source, mod1Dest, mod1Amount,
                         mod2Source, mod2Dest, mod2Amount,
                         mod3Source, mod3Dest, mod3Amount,

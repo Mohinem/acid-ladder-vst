@@ -12,6 +12,8 @@ public:
     void prepare (double sampleRate)
     {
         sr = (float) sampleRate;
+        filterCharSmoothed.reset (sr, 0.01);
+        filterCharSmoothed.setCurrentAndTargetValue (0.0f);
 
         phase = 0.0f;
         phaseUnisonA = 0.0f;
@@ -34,6 +36,7 @@ public:
         // filter state
         filterL = {};
         filterR = {};
+        filterCharSmoothed.setCurrentAndTargetValue (0.0f);
 
         // legacy lp not used anymore, but keep zeroed in case you referenced it elsewhere
         lp = 0.0f;
@@ -42,7 +45,8 @@ public:
     void setParams (float waveIn, float cutoffIn, float resIn, float envmodIn,
                     float decayIn, float accentIn, float glideMsIn,
                     float driveIn, float satIn, float subMixIn,
-                    float unisonIn, float unisonSpreadIn, float gainIn)
+                    float unisonIn, float unisonSpreadIn, float gainIn,
+                    int filterCharIn)
     {
         wave    = waveIn;
         cutoff  = cutoffIn;     // Hz
@@ -57,6 +61,8 @@ public:
         unison  = unisonIn;     // 0..1
         unisonSpread = unisonSpreadIn; // 0..1
         gain    = gainIn;       // linear
+        targetFilterChar = juce::jlimit (0, 4, filterCharIn);
+        filterCharSmoothed.setTargetValue ((float) targetFilterChar);
 
         // simple exponential decay envelope coefficient
         const float d = juce::jmax (0.001f, decay);
@@ -129,6 +135,7 @@ public:
 
         filterL = {};
         filterR = {};
+        filterCharSmoothed.setCurrentAndTargetValue ((float) targetFilterChar);
     }
 
     std::array<float, 2> renderStereo()
@@ -234,17 +241,17 @@ public:
         // --- Ladder-ish resonant 4-pole filter ---
         // Coefficient for one-pole stage: g = 1 - exp(-2*pi*fc/sr)
         const float g = 1.0f - std::exp (-2.0f * juce::MathConstants<float>::pi * fc / sr);
+        const float gOs = 1.0f - std::exp (-2.0f * juce::MathConstants<float>::pi * fc / (sr * 2.0f));
 
         // Resonance amount. This is "by ear" scaling.
         // Make sure the full knob range is audibly effective.
         // Too high without clipping can explode, so we soft-clip the loop.
         const float resNorm = juce::jlimit (0.0f, 1.0f, res);
-        float k = juce::jmap (resNorm, 0.0f, 1.0f, 0.0f, 8.0f);
-        k *= (1.0f - 0.25f * g);
+        float kBase = juce::jmap (resNorm, 0.0f, 1.0f, 0.0f, 8.0f);
 
         // Drive: pre-gain into the ladder core
         float driveAmt = juce::jlimit (0.0f, 1.0f, drive + modDrive);
-        const float pre = 1.0f + 6.0f * driveAmt;
+        float pre = 1.0f + 6.0f * driveAmt;
 
         float oscLeft = 0.0f;
         float oscRight = 0.0f;
@@ -269,8 +276,31 @@ public:
             addPanned (oscLeft, oscRight, subAmt * 0.8f * sub, basePan);
         }
 
-        float left = processFilter (oscLeft * pre, k, g, filterL);
-        float right = processFilter (oscRight * pre, k, g, filterR);
+        const float charIndex = filterCharSmoothed.getNextValue();
+        const int idx0 = juce::jlimit (0, 4, (int) std::floor (charIndex));
+        const int idx1 = juce::jlimit (0, 4, idx0 + 1);
+        const float charMix = juce::jlimit (0.0f, 1.0f, charIndex - (float) idx0);
+
+        const auto modeA = getFilterModeSettings (idx0);
+        const auto modeB = getFilterModeSettings (idx1);
+
+        auto lerp = [] (float a, float b, float t)
+        {
+            return a + (b - a) * t;
+        };
+
+        FilterModeSettings mode {};
+        mode.kScale = lerp (modeA.kScale, modeB.kScale, charMix);
+        mode.kGScale = lerp (modeA.kGScale, modeB.kGScale, charMix);
+        mode.feedbackDrive = lerp (modeA.feedbackDrive, modeB.feedbackDrive, charMix);
+        mode.stageClip = lerp (modeA.stageClip, modeB.stageClip, charMix);
+        mode.asym = lerp (modeA.asym, modeB.asym, charMix);
+        mode.resComp = lerp (modeA.resComp, modeB.resComp, charMix);
+        mode.oversample = modeA.oversample || modeB.oversample;
+        mode.clampStages = modeA.clampStages || modeB.clampStages;
+
+        float left = processFilter (oscLeft * pre, kBase, g, gOs, mode, filterL);
+        float right = processFilter (oscRight * pre, kBase, g, gOs, mode, filterR);
 
         // optional output saturation (kept from your original "drive coloration")
         left = std::tanh (left);
@@ -301,10 +331,15 @@ public:
 
 private:
     // Cheap, stable soft clip (faster than tanh in the feedback loop)
-    static inline float softClip (float v)
+    static inline float softClip (float v, float a = 0.8f)
     {
-        const float a = 0.8f;
         return v / (1.0f + a * std::abs (v));
+    }
+
+    static inline float softClipAsym (float v, float a, float asym)
+    {
+        const float drive = v * ((v >= 0.0f) ? (1.0f + asym) : (1.0f - asym));
+        return softClip (drive, a);
     }
 
     struct FilterState
@@ -346,19 +381,123 @@ private:
         right += value * gR;
     }
 
-    static inline float processFilter (float input, float k, float g, FilterState& state)
+    struct FilterModeSettings
     {
-        float u = input;
-        u -= k * state.lastY;
-        u = softClip (u);
+        float kScale = 1.0f;
+        float kGScale = 0.25f;
+        float feedbackDrive = 1.0f;
+        float stageClip = 0.8f;
+        float asym = 0.0f;
+        float resComp = 0.0f;
+        bool oversample = false;
+        bool clampStages = false;
+    };
 
-        state.z1 += g * (u  - state.z1);
-        state.z2 += g * (state.z1 - state.z2);
-        state.z3 += g * (state.z2 - state.z3);
-        state.z4 += g * (state.z3 - state.z4);
+    static inline FilterModeSettings getFilterModeSettings (int mode)
+    {
+        FilterModeSettings settings {};
+        switch (mode)
+        {
+            case 1: // Clean Ladder
+                settings.kScale = 0.88f;
+                settings.kGScale = 0.18f;
+                settings.feedbackDrive = 0.85f;
+                settings.stageClip = 0.5f;
+                settings.resComp = 0.12f;
+                break;
+            case 2: // Aggressive
+                settings.kScale = 1.18f;
+                settings.kGScale = 0.12f;
+                settings.feedbackDrive = 1.55f;
+                settings.stageClip = 1.1f;
+                settings.asym = 0.18f;
+                break;
+            case 3: // Modern
+                settings.kGScale = 0.12f;
+                settings.feedbackDrive = 0.95f;
+                settings.stageClip = 0.4f;
+                settings.oversample = true;
+                break;
+            case 4: // Screech
+                settings.kScale = 1.32f;
+                settings.kGScale = 0.08f;
+                settings.feedbackDrive = 2.1f;
+                settings.stageClip = 1.4f;
+                settings.asym = 0.32f;
+                settings.clampStages = true;
+                break;
+            case 0: // Classic 303
+            default:
+                break;
+        }
+        return settings;
+    }
 
-        float y = state.z4;
-        state.lastY = y;
+    static inline float processFilter (float input, float kBase, float g, float gOs,
+                                       const FilterModeSettings& mode, FilterState& state)
+    {
+        float k = kBase * mode.kScale;
+        k *= (1.0f - mode.kGScale * g);
+
+        k = juce::jlimit (0.0f, 12.0f, k);
+
+        auto processSample = [&](float inSample, float gSample)
+        {
+            float u = inSample;
+            u -= k * state.lastY;
+
+            if (mode.asym > 0.001f)
+                u = softClipAsym (u * mode.feedbackDrive, mode.stageClip, mode.asym);
+            else
+                u = softClip (u * mode.feedbackDrive, mode.stageClip);
+
+            state.z1 += gSample * (u  - state.z1);
+            state.z2 += gSample * (state.z1 - state.z2);
+            state.z3 += gSample * (state.z2 - state.z3);
+            state.z4 += gSample * (state.z3 - state.z4);
+
+            if (mode.clampStages)
+            {
+                state.z1 = juce::jlimit (-3.0f, 3.0f, state.z1);
+                state.z2 = juce::jlimit (-3.0f, 3.0f, state.z2);
+                state.z3 = juce::jlimit (-3.0f, 3.0f, state.z3);
+                state.z4 = juce::jlimit (-3.0f, 3.0f, state.z4);
+            }
+            else
+            {
+                if (std::abs (state.z1) < 1e-12f) state.z1 = 0.0f;
+                if (std::abs (state.z2) < 1e-12f) state.z2 = 0.0f;
+                if (std::abs (state.z3) < 1e-12f) state.z3 = 0.0f;
+                if (std::abs (state.z4) < 1e-12f) state.z4 = 0.0f;
+            }
+
+            float y = state.z4;
+            if (mode.resComp > 0.0f)
+                y += (mode.resComp * (1.0f - g)) * (inSample - y);
+
+            if (! std::isfinite (y))
+            {
+                state = {};
+                return 0.0f;
+            }
+
+            state.lastY = y;
+            return y;
+        };
+
+        float y = 0.0f;
+        if (mode.oversample)
+        {
+            y = processSample (input, gOs);
+            y = processSample (input, gOs);
+        }
+        else
+        {
+            y = processSample (input, g);
+        }
+
+        if (std::abs (y) < 1e-12f)
+            y = 0.0f;
         return y;
     }
 
@@ -399,6 +538,8 @@ private:
     float unison  = 0.0f;     // 0..1
     float unisonSpread = 0.0f; // 0..1
     float gain    = 0.2f;     // linear
+    int targetFilterChar = 0;
+    juce::SmoothedValue<float> filterCharSmoothed;
 
     float lfo1Rate = 0.5f;
     float lfo2Rate = 1.25f;
