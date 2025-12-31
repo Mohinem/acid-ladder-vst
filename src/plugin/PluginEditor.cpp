@@ -207,6 +207,11 @@ AcidSynthAudioProcessorEditor::AcidSynthAudioProcessorEditor (AcidSynthAudioProc
         addAndMakeVisible (*combo);
     }
 
+    filterChar.setColour (juce::ComboBox::backgroundColourId, juce::Colour (0xff1b1b1b));
+    filterChar.setColour (juce::ComboBox::textColourId, juce::Colours::white.withAlpha (0.9f));
+    filterChar.setColour (juce::ComboBox::outlineColourId, juce::Colours::white.withAlpha (0.2f));
+    addAndMakeVisible (filterChar);
+
     auto addModItems = [] (juce::ComboBox& combo, const juce::StringArray& items)
     {
         for (int i = 0; i < items.size(); ++i)
@@ -215,6 +220,7 @@ AcidSynthAudioProcessorEditor::AcidSynthAudioProcessorEditor (AcidSynthAudioProc
 
     const juce::StringArray modSources { "Off", "LFO 1", "LFO 2", "Mod Env", "Velocity", "Aftertouch" };
     const juce::StringArray modDests { "Off", "Cutoff", "Pitch", "Drive", "Gain", "Pan" };
+    const juce::StringArray filterChars { "Classic 303", "Clean Ladder", "Aggressive", "Modern", "Screech" };
 
     addModItems (mod1Source, modSources);
     addModItems (mod2Source, modSources);
@@ -224,12 +230,15 @@ AcidSynthAudioProcessorEditor::AcidSynthAudioProcessorEditor (AcidSynthAudioProc
     addModItems (mod2Dest, modDests);
     addModItems (mod3Dest, modDests);
 
+    addModItems (filterChar, filterChars);
+
     mod1Source.setTooltip ("Mod 1 Source");
     mod1Dest.setTooltip ("Mod 1 Destination");
     mod2Source.setTooltip ("Mod 2 Source");
     mod2Dest.setTooltip ("Mod 2 Destination");
     mod3Source.setTooltip ("Mod 3 Source");
     mod3Dest.setTooltip ("Mod 3 Destination");
+    filterChar.setTooltip ("Filter Character");
 
     // --- Keyboard
     addAndMakeVisible (keyboard);
@@ -320,6 +329,7 @@ AcidSynthAudioProcessorEditor::AcidSynthAudioProcessorEditor (AcidSynthAudioProc
     setupLabel (unisonLabel, "UNISON");
     setupLabel (unisonSpreadLabel, "SPREAD");
     setupLabel (gainLabel,   "GAIN");
+    setupLabel (filterCharLabel, "FILTER CHAR");
     setupLabel (lfo1RateLabel, "LFO 1 RATE");
     setupLabel (lfo2RateLabel, "LFO 2 RATE");
     setupLabel (modEnvDecayLabel, "MOD ENV");
@@ -384,6 +394,7 @@ AcidSynthAudioProcessorEditor::AcidSynthAudioProcessorEditor (AcidSynthAudioProc
     aMod2Dest = std::make_unique<ComboAttachment> (apvts, "mod2Dest", mod2Dest);
     aMod3Source = std::make_unique<ComboAttachment> (apvts, "mod3Source", mod3Source);
     aMod3Dest = std::make_unique<ComboAttachment> (apvts, "mod3Dest", mod3Dest);
+    aFilterChar = std::make_unique<ComboAttachment> (apvts, "filterChar", filterChar);
 
     // --- Double-click reset
     for (auto* s : { &wave, &cutoff, &res, &envmod, &decay, &accent, &glide, &drive, &sat, &sub, &unison,
@@ -549,6 +560,14 @@ void AcidSynthAudioProcessorEditor::resized()
         s.setBounds (cell);
     };
 
+    auto placeCombo = [&](juce::Label& lbl, juce::ComboBox& combo, int col, int row)
+    {
+        auto cell = cellRect (col, row);
+        auto labelArea = cell.removeFromTop (14);
+        lbl.setBounds (labelArea);
+        combo.setBounds (cell.withHeight (22).withCentre (cell.getCentre()));
+    };
+
     // 4x4 placements
     place (waveLabel,   wave,   waveValueLabel,   0, 0);
     place (cutoffLabel, cutoff, cutoffValueLabel, 1, 0);
@@ -566,6 +585,7 @@ void AcidSynthAudioProcessorEditor::resized()
     place (unisonSpreadLabel, unisonSpread, unisonSpreadValueLabel, 3, 2);
 
     place (gainLabel,   gain,   gainValueLabel,   0, 3);
+    placeCombo (filterCharLabel, filterChar, 1, 3);
 
     // Mod/FX panel layout
     auto modFxArea = modFxPanel.reduced (18, 12);
