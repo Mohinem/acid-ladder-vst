@@ -86,3 +86,6 @@ wine-debug.log
 # (IMPORTANT: DO NOT ignore juce/JUCE itself)
 # =========================
 juce/JUCE/build/
+
+
+debug-commands.txt
