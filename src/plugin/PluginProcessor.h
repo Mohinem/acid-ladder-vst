@@ -493,7 +493,7 @@ private:
         }
         else
         {
-            y = processSample (input, gLocal);
+            y = processSample (input, g);
         }
 
         if (std::abs (y) < 1e-12f)
