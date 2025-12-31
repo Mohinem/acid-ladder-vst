@@ -247,7 +247,7 @@ public:
         // Make sure the full knob range is audibly effective.
         // Too high without clipping can explode, so we soft-clip the loop.
         const float resNorm = juce::jlimit (0.0f, 1.0f, res);
-        float kBase = juce::jmap (resNorm, 0.0f, 1.0f, 0.0f, 8.0f);
+        float kBase = juce::jmap (resNorm, 0.0f, 1.0f, 0.0f, 12.0f);
 
         // Drive: pre-gain into the ladder core
         float driveAmt = juce::jlimit (0.0f, 1.0f, drive + modDrive);
@@ -389,6 +389,8 @@ private:
         float stageClip = 0.8f;
         float asym = 0.0f;
         float resComp = 0.0f;
+        float inputDrive = 1.0f;
+        float outputGain = 1.0f;
         bool oversample = false;
         bool clampStages = false;
     };
@@ -399,35 +401,53 @@ private:
         switch (mode)
         {
             case 1: // Clean Ladder
-                settings.kScale = 0.88f;
-                settings.kGScale = 0.18f;
-                settings.feedbackDrive = 0.85f;
-                settings.stageClip = 0.5f;
-                settings.resComp = 0.12f;
+                settings.kScale = 0.9f;
+                settings.kGScale = 0.22f;
+                settings.feedbackDrive = 0.75f;
+                settings.stageClip = 0.45f;
+                settings.resComp = 0.18f;
+                settings.inputDrive = 0.9f;
+                settings.outputGain = 1.05f;
                 break;
             case 2: // Aggressive
-                settings.kScale = 1.18f;
-                settings.kGScale = 0.12f;
-                settings.feedbackDrive = 1.55f;
-                settings.stageClip = 1.1f;
-                settings.asym = 0.18f;
+                settings.kScale = 1.25f;
+                settings.kGScale = 0.1f;
+                settings.feedbackDrive = 1.8f;
+                settings.stageClip = 1.25f;
+                settings.asym = 0.22f;
+                settings.resComp = 0.08f;
+                settings.inputDrive = 1.2f;
+                settings.outputGain = 0.95f;
                 break;
             case 3: // Modern
-                settings.kGScale = 0.12f;
-                settings.feedbackDrive = 0.95f;
-                settings.stageClip = 0.4f;
+                settings.kScale = 1.05f;
+                settings.kGScale = 0.14f;
+                settings.feedbackDrive = 1.05f;
+                settings.stageClip = 0.55f;
+                settings.resComp = 0.15f;
+                settings.inputDrive = 1.05f;
                 settings.oversample = true;
                 break;
             case 4: // Screech
-                settings.kScale = 1.32f;
-                settings.kGScale = 0.08f;
-                settings.feedbackDrive = 2.1f;
-                settings.stageClip = 1.4f;
-                settings.asym = 0.32f;
+                settings.kScale = 1.45f;
+                settings.kGScale = 0.06f;
+                settings.feedbackDrive = 2.4f;
+                settings.stageClip = 1.55f;
+                settings.asym = 0.38f;
+                settings.resComp = 0.05f;
+                settings.inputDrive = 1.35f;
+                settings.outputGain = 0.9f;
                 settings.clampStages = true;
                 break;
             case 0: // Classic 303
             default:
+                settings.kScale = 1.05f;
+                settings.kGScale = 0.2f;
+                settings.feedbackDrive = 1.1f;
+                settings.stageClip = 0.85f;
+                settings.resComp = 0.1f;
+                settings.inputDrive = 1.1f;
+                settings.outputGain = 0.98f;
                 break;
         }
         return settings;
@@ -441,6 +461,7 @@ private:
 
         k = juce::jlimit (0.0f, 12.0f, k);
 
+        const float inputSample = softClip (input * mode.inputDrive, 0.6f);
         auto processSample = [&](float inSample, float gSample)
         {
             float u = inSample;
@@ -488,17 +509,17 @@ private:
         float y = 0.0f;
         if (mode.oversample)
         {
-            y = processSample (input, gOs);
-            y = processSample (input, gOs);
+            y = processSample (inputSample, gOs);
+            y = processSample (inputSample, gOs);
         }
         else
         {
-            y = processSample (input, g);
+            y = processSample (inputSample, g);
         }
 
         if (std::abs (y) < 1e-12f)
             y = 0.0f;
-        return y;
+        return y * mode.outputGain;
     }
 
     // --- common voice state ---
