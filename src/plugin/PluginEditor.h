@@ -31,10 +31,12 @@ private:
     juce::Slider lfo1Rate, lfo2Rate, modEnvDecay;
     juce::Slider mod1Amount, mod2Amount, mod3Amount;
     juce::Slider fxDrive, fxChorus, fxDelay, fxDelayTime, fxReverb;
+    juce::ComboBox filterChar;
 
     // Labels (real components, not painted text)
     juce::Label waveLabel, cutoffLabel, resLabel, envmodLabel, decayLabel, accentLabel, glideLabel,
         driveLabel, satLabel, subLabel, unisonLabel, unisonSpreadLabel, gainLabel;
+    juce::Label filterCharLabel;
     juce::Label lfo1RateLabel, lfo2RateLabel, modEnvDecayLabel;
     juce::Label mod1AmountLabel, mod2AmountLabel, mod3AmountLabel;
     juce::Label fxDriveLabel, fxChorusLabel, fxDelayLabel, fxDelayTimeLabel, fxReverbLabel;
@@ -65,6 +67,7 @@ private:
     std::unique_ptr<Attachment> aMod1Amount, aMod2Amount, aMod3Amount;
     std::unique_ptr<Attachment> aFxDrive, aFxChorus, aFxDelay, aFxDelayTime, aFxReverb;
     std::unique_ptr<ComboAttachment> aMod1Source, aMod1Dest, aMod2Source, aMod2Dest, aMod3Source, aMod3Dest;
+    std::unique_ptr<ComboAttachment> aFilterChar;
 
     // Internal helpers
     void setupKnob (juce::Slider& s);
