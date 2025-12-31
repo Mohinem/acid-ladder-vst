@@ -26,6 +26,7 @@ public:
 
         targetFreq  = 110.0f;
         currentFreq = 110.0f;
+        activeNote = -1;
         gate = false;
         vel  = 0.0f;
         aftertouch = 0.0f;
@@ -87,16 +88,30 @@ public:
 
     void noteOn (int midiNote, float velocity)
     {
+        const bool wasGate = gate;
         gate = true;
         vel = juce::jlimit (0.0f, 1.0f, velocity);
         targetFreq = juce::MidiMessage::getMidiNoteInHertz (midiNote);
+        activeNote = midiNote;
+        if (! wasGate)
+        {
+            currentFreq = targetFreq;
+            phase = 0.0f;
+            phaseUnisonA = 0.0f;
+            phaseUnisonB = 0.0f;
+            phaseSub = 0.0f;
+        }
         env = 1.0f; // instant attack for now
         modEnv = 1.0f;
     }
 
-    void noteOff (int /*midiNote*/)
+    void noteOff (int midiNote)
     {
-        gate = false;
+        if (midiNote == activeNote)
+        {
+            gate = false;
+            activeNote = -1;
+        }
         // let envelope decay naturally
     }
 
@@ -105,6 +120,7 @@ public:
         gate = false;
         env = 0.0f;
         modEnv = 0.0f;
+        activeNote = -1;
 
         phase = 0.0f;
         phaseUnisonA = 0.0f;
@@ -364,6 +380,7 @@ private:
     float targetFreq  = 110.0f;
     float currentFreq = 110.0f;
 
+    int activeNote = -1;
     bool  gate = false;
     float vel  = 0.0f;
     float aftertouch = 0.0f;
