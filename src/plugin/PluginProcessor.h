@@ -235,8 +235,8 @@ public:
 
         // --- cutoff with envelope modulation (keep your behavior) ---
         // envmod maps to an added cutoff range. Tune this later if you want.
-        float fc = cutoff + envmod * 8000.0f * env + modCutoff;
-        fc = juce::jlimit (20.0f, 18000.0f, fc);
+        float fc = cutoff + envmod * 5000.0f * env + modCutoff;
+        fc = juce::jlimit (20.0f, 16000.0f, fc);
 
         // --- Ladder-ish resonant 4-pole filter ---
         // Coefficient for one-pole stage: g = 1 - exp(-2*pi*fc/sr)
@@ -247,7 +247,8 @@ public:
         // Make sure the full knob range is audibly effective.
         // Too high without clipping can explode, so we soft-clip the loop.
         const float resNorm = juce::jlimit (0.0f, 1.0f, res);
-        float kBase = juce::jmap (resNorm, 0.0f, 1.0f, 0.0f, 12.0f);
+        const float resCurve = resNorm * resNorm;
+        float kBase = juce::jmap (resCurve, 0.0f, 1.0f, 0.0f, 4.3f);
 
         // Drive: pre-gain into the ladder core
         float driveAmt = juce::jlimit (0.0f, 1.0f, drive + modDrive);
@@ -401,53 +402,54 @@ private:
         switch (mode)
         {
             case 1: // Clean Ladder
-                settings.kScale = 0.9f;
-                settings.kGScale = 0.22f;
-                settings.feedbackDrive = 0.75f;
-                settings.stageClip = 0.45f;
-                settings.resComp = 0.18f;
-                settings.inputDrive = 0.9f;
-                settings.outputGain = 1.05f;
+                settings.kScale = 0.95f;
+                settings.kGScale = 0.35f;
+                settings.feedbackDrive = 0.6f;
+                settings.stageClip = 0.4f;
+                settings.resComp = 0.22f;
+                settings.inputDrive = 0.85f;
+                settings.outputGain = 1.02f;
                 break;
             case 2: // Aggressive
-                settings.kScale = 1.25f;
-                settings.kGScale = 0.1f;
-                settings.feedbackDrive = 1.8f;
-                settings.stageClip = 1.25f;
-                settings.asym = 0.22f;
-                settings.resComp = 0.08f;
-                settings.inputDrive = 1.2f;
-                settings.outputGain = 0.95f;
+                settings.kScale = 1.1f;
+                settings.kGScale = 0.2f;
+                settings.feedbackDrive = 1.1f;
+                settings.stageClip = 0.9f;
+                settings.asym = 0.18f;
+                settings.resComp = 0.12f;
+                settings.inputDrive = 1.1f;
+                settings.outputGain = 0.98f;
                 break;
             case 3: // Modern
-                settings.kScale = 1.05f;
-                settings.kGScale = 0.14f;
-                settings.feedbackDrive = 1.05f;
+                settings.kScale = 1.02f;
+                settings.kGScale = 0.25f;
+                settings.feedbackDrive = 0.85f;
                 settings.stageClip = 0.55f;
-                settings.resComp = 0.15f;
-                settings.inputDrive = 1.05f;
+                settings.resComp = 0.2f;
+                settings.inputDrive = 1.0f;
                 settings.oversample = true;
                 break;
             case 4: // Screech
-                settings.kScale = 1.45f;
-                settings.kGScale = 0.06f;
-                settings.feedbackDrive = 2.4f;
-                settings.stageClip = 1.55f;
-                settings.asym = 0.38f;
-                settings.resComp = 0.05f;
-                settings.inputDrive = 1.35f;
-                settings.outputGain = 0.9f;
+                settings.kScale = 1.2f;
+                settings.kGScale = 0.18f;
+                settings.feedbackDrive = 1.6f;
+                settings.stageClip = 1.1f;
+                settings.asym = 0.32f;
+                settings.resComp = 0.08f;
+                settings.inputDrive = 1.2f;
+                settings.outputGain = 0.95f;
                 settings.clampStages = true;
                 break;
             case 0: // Classic 303
             default:
-                settings.kScale = 1.05f;
-                settings.kGScale = 0.2f;
-                settings.feedbackDrive = 1.1f;
-                settings.stageClip = 0.85f;
-                settings.resComp = 0.1f;
-                settings.inputDrive = 1.1f;
+                settings.kScale = 1.0f;
+                settings.kGScale = 0.35f;
+                settings.feedbackDrive = 0.85f;
+                settings.stageClip = 0.7f;
+                settings.resComp = 0.22f;
+                settings.inputDrive = 1.0f;
                 settings.outputGain = 0.98f;
+                settings.oversample = true;
                 break;
         }
         return settings;
@@ -459,7 +461,7 @@ private:
         float k = kBase * mode.kScale;
         k *= (1.0f - mode.kGScale * g);
 
-        k = juce::jlimit (0.0f, 12.0f, k);
+        k = juce::jlimit (0.0f, 4.5f, k);
 
         const float inputSample = softClip (input * mode.inputDrive, 0.6f);
         auto processSample = [&](float inSample, float gSample)
