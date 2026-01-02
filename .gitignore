@@ -4,6 +4,7 @@
 build/
 build-linux/
 build-win/
+build-debug/
 cmake-build-*/
 CMakeFiles/
 CMakeCache.txt
