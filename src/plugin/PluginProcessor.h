@@ -247,8 +247,8 @@ public:
         // Make sure the full knob range is audibly effective.
         // Too high without clipping can explode, so we soft-clip the loop.
         const float resNorm = juce::jlimit (0.0f, 1.0f, res);
-        const float resCurve = resNorm * resNorm;
-        float kBase = juce::jmap (resCurve, 0.0f, 1.0f, 0.0f, 4.3f);
+        const float resCurve = std::pow (resNorm, 1.35f);
+        float kBase = juce::jmap (resCurve, 0.0f, 1.0f, 0.0f, 4.8f);
 
         // Drive: pre-gain into the ladder core
         float driveAmt = juce::jlimit (0.0f, 1.0f, drive + modDrive);
@@ -461,7 +461,7 @@ private:
         float k = kBase * mode.kScale;
         k *= (1.0f - mode.kGScale * g);
 
-        k = juce::jlimit (0.0f, 4.5f, k);
+        k = juce::jlimit (0.0f, 4.9f, k);
 
         const float inputSample = softClip (input * mode.inputDrive, 0.6f);
         auto processSample = [&](float inSample, float gSample)
