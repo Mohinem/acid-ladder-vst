@@ -1,6 +1,6 @@
 # Acid Ladder VST
 
-A monophonic acid‑style synthesizer plugin built in C++ with JUCE. It combines a classic saw↔square oscillator, a nonlinear 4‑pole ladder filter, and a compact modulation matrix with modern conveniences like unison, sub‑oscillator blend, and built‑in FX.
+A monophonic acid‑style synthesizer plugin built in C++ with JUCE. It combines a classic saw↔square oscillator, a nonlinear 4‑pole ladder filter with selectable character modes, and a compact modulation matrix with modern conveniences like unison, sub‑oscillator blend, pan modulation, and built‑in FX.
 
 ## Table of Contents
 - [Features](#features)
@@ -15,17 +15,18 @@ A monophonic acid‑style synthesizer plugin built in C++ with JUCE. It combines
 
 ## Features
 - Saw ↔ square morph oscillator with sub‑oscillator blend
-- Nonlinear 4‑pole ladder low‑pass filter with resonance
+- Nonlinear 4‑pole ladder low‑pass filter with selectable character modes
 - Accent and glide (portamento)
 - Decay‑only envelope (303‑style) plus a separate modulation envelope
-- Unison detune/spread
-- Modulation matrix with 3 assignable slots
+- Unison detune/spread with stereo panning
+- Modulation matrix with 3 assignable slots (including pan destination)
 - Built‑in FX chain: drive, chorus, delay, reverb
+- On‑screen keyboard for quick auditioning
 - VST3 output (optional VST2 with SDK)
 
 ## Signal Flow
 ```
-Oscillator (+Sub +Unison) → Ladder Filter → Saturation → FX (Drive → Chorus → Delay → Reverb) → Output
+Oscillator (+Sub +Unison) → Ladder Filter (Character) → Saturation → FX (Drive → Chorus → Delay → Reverb) → Output
 ```
 
 ## Parameters
@@ -35,22 +36,29 @@ All parameters are exposed via the plugin’s GUI and the host automation system
 | --- | --- | --- | --- |
 | Wave | 0.0 → 1.0 | 0.0 | Saw ↔ square morph (0 = saw, 1 = square). |
 | Cutoff | 20 Hz → 18 kHz | 800 Hz | Filter cutoff frequency. |
-| Resonance | 0.0 → 0.995 | 0.35 | Ladder filter resonance. |
-| Env Mod | 0.0 → 1.0 | 0.75 | Filter envelope modulation depth. |
+| Resonance | 0.0 → 0.995 | 0.3 | Ladder filter resonance. |
+| Filter Character | Classic 303 → Screech | Classic 303 | Filter response model (Classic 303, Clean Ladder, Aggressive, Modern, Screech). |
+| Env Mod | 0.0 → 1.0 | 0.55 | Filter envelope modulation depth. |
 | Decay | 0.01 → 2.0 s | 0.18 s | Main amplitude envelope decay. |
 | Accent | 0.0 → 1.0 | 0.75 | Accent amount applied on note on. |
 | Glide (ms) | 0 → 500 ms | 80 ms | Portamento time. |
-| Drive | 0.0 → 1.0 | 0.35 | Pre‑filter drive. |
-| Saturation | 0.0 → 1.0 | 0.2 | Output saturation amount. |
-| Sub Mix | 0.0 → 1.0 | 0.35 | Sub‑oscillator blend. |
-| Unison | 0.0 → 1.0 | 0.25 | Unison amount (dual detune). |
-| Unison Spread | 0.0 → 1.0 | 0.45 | Unison stereo spread. |
+| Drive | 0.0 → 1.0 | 0.2 | Pre‑filter drive. |
+| Saturation | 0.0 → 1.0 | 0.1 | Output saturation amount. |
+| Sub Mix | 0.0 → 1.0 | 0.1 | Sub‑oscillator blend. |
+| Unison | 0.0 → 1.0 | 0.0 | Unison amount (dual detune). |
+| Unison Spread | 0.0 → 1.0 | 0.2 | Unison stereo spread. |
 | Gain | 0.0 → 1.5 | 0.85 | Output gain. |
 | LFO 1 Rate | 0.0 → 15 Hz | 2.2 Hz | LFO 1 frequency. |
 | LFO 2 Rate | 0.0 → 15 Hz | 4.8 Hz | LFO 2 frequency. |
 | Mod Env Decay | 0.0 → 2.5 s | 0.55 s | Modulation envelope decay. |
+| Mod 1 Source | Off → Aftertouch | Off | Mod slot 1 source. |
+| Mod 1 Dest | Off → Pan | Off | Mod slot 1 destination. |
 | Mod 1 Amount | -1.0 → 1.0 | 0.0 | Mod slot 1 depth. |
+| Mod 2 Source | Off → Aftertouch | Off | Mod slot 2 source. |
+| Mod 2 Dest | Off → Pan | Off | Mod slot 2 destination. |
 | Mod 2 Amount | -1.0 → 1.0 | 0.0 | Mod slot 2 depth. |
+| Mod 3 Source | Off → Aftertouch | Off | Mod slot 3 source. |
+| Mod 3 Dest | Off → Pan | Off | Mod slot 3 destination. |
 | Mod 3 Amount | -1.0 → 1.0 | 0.0 | Mod slot 3 depth. |
 | FX Drive | 0.0 → 1.0 | 0.15 | FX drive amount. |
 | Chorus | 0.0 → 1.0 | 0.18 | Chorus mix. |
@@ -83,6 +91,7 @@ Set the source/destination for each slot and dial in the amount (negative values
 - **Monophonic**: last‑note priority with legato glide.
 - **Velocity** and **aftertouch** are available as modulation sources.
 - **Channel pressure** and **poly aftertouch** are both supported.
+- The GUI includes an **on‑screen keyboard** that feeds MIDI into the synth.
 
 ## Build Requirements
 - CMake 3.15+ (CMake presets require 3.19+)
@@ -96,6 +105,10 @@ Set the source/destination for each slot and dial in the amount (negative values
 cmake --preset linux-release
 cmake --build --preset linux
 ```
+
+Available presets (see `CMakePresets.json`):
+- `linux-release` → `build-linux` (Release)
+- `windows-release` → `build-win` (Release, MinGW toolchain)
 
 Windows cross‑compile via MinGW (see `cmake/toolchains/mingw64.cmake`):
 ```bash
