@@ -1,6 +1,15 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
+/*
+Manual test procedure (Acid 303 Accent + Slide):
+1) Hold a note, press another while holding first -> glide without retrigger; filter state stays continuous.
+2) Play staccato notes -> amp + filter envelopes retrigger.
+3) Play accented (vel > 0.7) staccato -> cutoff opens, more bite/drive, slightly shorter decay (not just louder).
+4) Play accented legato -> no envelope retrigger, but a perceptible squelch/drive kick.
+5) Turn Accent/Cutoff/Res during sustain -> no clicks or zipper noise.
+*/
+
 static float getParam (juce::AudioProcessorValueTreeState& apvts, const char* id)
 {
     if (auto* v = apvts.getRawParameterValue (id))
