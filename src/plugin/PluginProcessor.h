@@ -1,6 +1,8 @@
 #pragma once
 #include <JuceHeader.h>
 #include <array>
+#include <vector>
+#include <algorithm>
 
 //==============================================================================
 // Minimal mono "acid voice" with ladder-ish resonant 4-pole filter.
@@ -14,6 +16,8 @@ public:
         sr = (float) sampleRate;
         filterCharSmoothed.reset (sr, 0.01);
         filterCharSmoothed.setCurrentAndTargetValue (0.0f);
+        accentSmoothed.reset (sr, 0.01);
+        accentSmoothed.setCurrentAndTargetValue (0.0f);
 
         phase = 0.0f;
         phaseUnisonA = 0.0f;
@@ -30,8 +34,12 @@ public:
         currentFreq = 110.0f;
         activeNote = -1;
         gate = false;
+        glideActive = false;
+        accentKick = 0.0f;
+        accentKickCoef = std::exp (-1.0f / (sr * 0.012f));
         vel  = 0.0f;
         aftertouch = 0.0f;
+        heldNotes.clear();
 
         // filter state
         filterL = {};
@@ -94,11 +102,20 @@ public:
 
     void noteOn (int midiNote, float velocity)
     {
+        const float clampedVelocity = juce::jlimit (0.0f, 1.0f, velocity);
+        const bool isAccented = (clampedVelocity > 0.7f) && (accent > 0.001f);
+
+        heldNotes.erase (std::remove_if (heldNotes.begin(), heldNotes.end(),
+                                         [midiNote] (const HeldNote& note) { return note.note == midiNote; }),
+                         heldNotes.end());
+        heldNotes.push_back ({ midiNote, clampedVelocity });
+
         const bool wasGate = gate;
         gate = true;
-        vel = juce::jlimit (0.0f, 1.0f, velocity);
+        vel = clampedVelocity;
         targetFreq = juce::MidiMessage::getMidiNoteInHertz (midiNote);
         activeNote = midiNote;
+        glideActive = wasGate;
         if (! wasGate)
         {
             currentFreq = targetFreq;
@@ -106,17 +123,39 @@ public:
             phaseUnisonA = 0.0f;
             phaseUnisonB = 0.0f;
             phaseSub = 0.0f;
+            env = 1.0f; // instant attack for now
+            modEnv = 1.0f;
         }
-        env = 1.0f; // instant attack for now
-        modEnv = 1.0f;
+        else if (isAccented)
+        {
+            // 303-style accented legato "kick" without retriggering envelopes.
+            accentKick = 1.0f;
+        }
     }
 
     void noteOff (int midiNote)
     {
+        heldNotes.erase (std::remove_if (heldNotes.begin(), heldNotes.end(),
+                                         [midiNote] (const HeldNote& note) { return note.note == midiNote; }),
+                         heldNotes.end());
+
         if (midiNote == activeNote)
         {
-            gate = false;
-            activeNote = -1;
+            if (! heldNotes.empty())
+            {
+                const auto& next = heldNotes.back();
+                activeNote = next.note;
+                targetFreq = juce::MidiMessage::getMidiNoteInHertz (next.note);
+                vel = next.velocity;
+                gate = true;
+                glideActive = true;
+            }
+            else
+            {
+                gate = false;
+                glideActive = false;
+                activeNote = -1;
+            }
         }
         // let envelope decay naturally
     }
@@ -124,9 +163,12 @@ public:
     void reset()
     {
         gate = false;
+        glideActive = false;
         env = 0.0f;
         modEnv = 0.0f;
         activeNote = -1;
+        heldNotes.clear();
+        accentKick = 0.0f;
 
         phase = 0.0f;
         phaseUnisonA = 0.0f;
@@ -143,7 +185,10 @@ public:
         // --- glide (as in your original code) ---
         const float glideSec  = juce::jmax (0.0f, glideMs) * 0.001f;
         const float glideCoef = (glideSec <= 0.0f) ? 0.0f : std::exp (-1.0f / (sr * glideSec));
-        currentFreq = glideCoef * currentFreq + (1.0f - glideCoef) * targetFreq;
+        if (glideActive)
+            currentFreq = glideCoef * currentFreq + (1.0f - glideCoef) * targetFreq;
+        else
+            currentFreq = targetFreq;
 
         // --- modulation sources ---
         lfo1Phase += lfo1Rate / sr;
@@ -154,9 +199,28 @@ public:
         const float lfo1 = std::sin (juce::MathConstants<float>::twoPi * lfo1Phase);
         const float lfo2 = std::sin (juce::MathConstants<float>::twoPi * (lfo2Phase + 0.25f));
 
-        // --- envelope decay ---
-        env *= envCoef;
-        modEnv *= modEnvCoef;
+        // --- Accent macro (velocity + Accent parameter) ---
+        // Accent shapes multiple targets like a classic 303: cutoff/res/envmod/drive/decay.
+        const float accentGate = (vel > 0.7f) ? 1.0f : 0.0f;
+        const float accentTarget = juce::jlimit (0.0f, 1.0f, accent * accentGate);
+        accentSmoothed.setTargetValue (accentTarget);
+        const float accentBase = accentSmoothed.getNextValue();
+        const float accentShaped = std::pow (accentBase, 2.2f);
+
+        const float accentKickValue = accentKick;
+        accentKick *= accentKickCoef;
+        if (accentKick < 1.0e-5f)
+            accentKick = 0.0f;
+
+        const float accentTotal = juce::jlimit (0.0f, 1.0f, accentShaped + 0.35f * accentKickValue);
+
+        // --- envelope decay (accent slightly tightens decay times) ---
+        const float decayScaled = juce::jmax (0.01f, decay * (1.0f - 0.25f * accentTotal));
+        const float modDecayScaled = juce::jmax (0.01f, modEnvDecay * (1.0f - 0.15f * accentTotal));
+        const float envCoefLocal = std::exp (-1.0f / (sr * decayScaled));
+        const float modEnvCoefLocal = std::exp (-1.0f / (sr * modDecayScaled));
+        env *= envCoefLocal;
+        modEnv *= modEnvCoefLocal;
 
         float modCutoff = 0.0f;
         float modPitch = 0.0f;
@@ -233,9 +297,11 @@ public:
             if (phaseSub >= 1.0f) phaseSub -= 1.0f;
         }
 
-        // --- cutoff with envelope modulation (keep your behavior) ---
-        // envmod maps to an added cutoff range. Tune this later if you want.
-        float fc = cutoff + envmod * 5000.0f * env + modCutoff;
+        // --- cutoff with envelope modulation (accent opens cutoff and boosts env depth) ---
+        // envmod maps to an added cutoff range.
+        const float cutoffAccent = cutoff * (1.0f + 1.2f * accentTotal);
+        const float envmodAccent = envmod * (1.0f + 0.6f * accentTotal);
+        float fc = cutoffAccent + envmodAccent * 5000.0f * env + modCutoff;
         fc = juce::jlimit (20.0f, 16000.0f, fc);
 
         // --- Ladder-ish resonant 4-pole filter ---
@@ -246,12 +312,14 @@ public:
         // Resonance amount. This is "by ear" scaling.
         // Make sure the full knob range is audibly effective.
         // Too high without clipping can explode, so we soft-clip the loop.
-        const float resNorm = juce::jlimit (0.0f, 1.0f, res);
+        const float resAccented = juce::jlimit (0.0f, 0.995f, res + 0.08f * accentTotal);
+        const float resNorm = juce::jlimit (0.0f, 1.0f, resAccented);
         const float resCurve = std::pow (resNorm, 1.35f);
         float kBase = juce::jmap (resCurve, 0.0f, 1.0f, 0.0f, 4.8f);
 
         // Drive: pre-gain into the ladder core
-        float driveAmt = juce::jlimit (0.0f, 1.0f, drive + modDrive);
+        const float driveAccent = drive * (1.0f + 1.0f * accentTotal);
+        float driveAmt = juce::jlimit (0.0f, 1.0f, driveAccent + modDrive);
         float pre = 1.0f + 6.0f * driveAmt;
 
         float oscLeft = 0.0f;
@@ -315,8 +383,8 @@ public:
             right = softClip (right * (1.0f + 8.0f * satAmt));
         }
 
-        // accent boosts volume a bit based on velocity (same as before)
-        const float acc = 1.0f + accent * 0.6f * (vel > 0.7f ? 1.0f : 0.0f);
+        // modest accent gain bump (the main accent impact is tone/drive/decay)
+        const float acc = 1.0f + 0.2f * accentTotal;
 
         float outGain = juce::jlimit (0.0f, 2.0f, gain + modGain);
 
@@ -357,6 +425,12 @@ private:
         int source = 0;
         int dest = 0;
         float amount = 0.0f;
+    };
+
+    struct HeldNote
+    {
+        int note = -1;
+        float velocity = 0.0f;
     };
 
     float getSourceValue (int sourceId, float lfo1, float lfo2) const
@@ -544,8 +618,12 @@ private:
 
     int activeNote = -1;
     bool  gate = false;
+    bool glideActive = false;
     float vel  = 0.0f;
     float aftertouch = 0.0f;
+    std::vector<HeldNote> heldNotes;
+    float accentKick = 0.0f;
+    float accentKickCoef = 0.0f;
 
     // --- params (set via setParams) ---
     float wave    = 0.0f;     // 0..1
@@ -563,6 +641,7 @@ private:
     float gain    = 0.2f;     // linear
     int targetFilterChar = 0;
     juce::SmoothedValue<float> filterCharSmoothed;
+    juce::SmoothedValue<float> accentSmoothed;
 
     float lfo1Rate = 0.5f;
     float lfo2Rate = 1.25f;
