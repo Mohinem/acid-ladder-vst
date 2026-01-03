@@ -29,12 +29,15 @@ public:
         envCoef = 0.0f;
         modEnv = 0.0f;
         modEnvCoef = 0.0f;
+        releaseEnv = 0.0f;
+        releaseCoef = 0.0f;
 
         targetFreq  = 110.0f;
         currentFreq = 110.0f;
         activeNote = -1;
         gate = false;
         glideActive = false;
+        releaseActive = false;
         accentKick = 0.0f;
         accentKickCoef = std::exp (-1.0f / (sr * 0.012f));
         vel  = 0.0f;
@@ -51,7 +54,7 @@ public:
     }
 
     void setParams (float waveIn, float cutoffIn, float resIn, float envmodIn,
-                    float decayIn, float accentIn, float glideMsIn,
+                    float decayIn, float releaseIn, float accentIn, float glideMsIn,
                     float driveIn, float satIn, float subMixIn,
                     float unisonIn, float unisonSpreadIn, float gainIn,
                     int filterCharIn)
@@ -61,6 +64,7 @@ public:
         res     = resIn;        // 0..1
         envmod  = envmodIn;     // 0..1-ish
         decay   = decayIn;      // seconds
+        release = releaseIn;    // seconds
         accent  = accentIn;     // 0..1
         glideMs = glideMsIn;    // ms
         drive   = driveIn;      // 0..1
@@ -75,6 +79,11 @@ public:
         // simple exponential decay envelope coefficient
         const float d = juce::jmax (0.001f, decay);
         envCoef = std::exp (-1.0f / (sr * d));
+
+        if (release <= 0.0001f)
+            releaseCoef = 0.0f;
+        else
+            releaseCoef = std::exp (-1.0f / (sr * release));
     }
 
     void setModMatrix (int src1, int dst1, float amt1,
@@ -116,6 +125,8 @@ public:
         targetFreq = juce::MidiMessage::getMidiNoteInHertz (midiNote);
         activeNote = midiNote;
         glideActive = wasGate;
+        releaseActive = false;
+        releaseEnv = 1.0f;
         if (! wasGate)
         {
             currentFreq = targetFreq;
@@ -155,6 +166,10 @@ public:
                 gate = false;
                 glideActive = false;
                 activeNote = -1;
+                releaseActive = true;
+                releaseEnv = 1.0f;
+                if (releaseCoef <= 0.0f)
+                    releaseEnv = 0.0f;
             }
         }
         // let envelope decay naturally
@@ -166,6 +181,8 @@ public:
         glideActive = false;
         env = 0.0f;
         modEnv = 0.0f;
+        releaseEnv = 0.0f;
+        releaseActive = false;
         activeNote = -1;
         heldNotes.clear();
         accentKick = 0.0f;
@@ -221,6 +238,28 @@ public:
         const float modEnvCoefLocal = std::exp (-1.0f / (sr * modDecayScaled));
         env *= envCoefLocal;
         modEnv *= modEnvCoefLocal;
+
+        if (gate)
+        {
+            releaseEnv = 1.0f;
+            releaseActive = false;
+        }
+        else if (releaseActive)
+        {
+            if (releaseCoef <= 0.0f)
+            {
+                releaseEnv = 0.0f;
+            }
+            else
+            {
+                releaseEnv *= releaseCoef;
+                if (releaseEnv < 1.0e-4f)
+                    releaseEnv = 0.0f;
+            }
+
+            if (releaseEnv == 0.0f)
+                releaseActive = false;
+        }
 
         float modCutoff = 0.0f;
         float modPitch = 0.0f;
@@ -388,8 +427,9 @@ public:
 
         float outGain = juce::jlimit (0.0f, 2.0f, gain + modGain);
 
-        left *= env * acc * outGain;
-        right *= env * acc * outGain;
+        const float ampEnv = env * releaseEnv;
+        left *= ampEnv * acc * outGain;
+        right *= ampEnv * acc * outGain;
 
         // avoid denormals
         if (std::abs (left) < 1e-12f) left = 0.0f;
@@ -612,6 +652,8 @@ private:
     float envCoef = 0.0f;
     float modEnv = 0.0f;
     float modEnvCoef = 0.0f;
+    float releaseEnv = 0.0f;
+    float releaseCoef = 0.0f;
 
     float targetFreq  = 110.0f;
     float currentFreq = 110.0f;
@@ -619,6 +661,7 @@ private:
     int activeNote = -1;
     bool  gate = false;
     bool glideActive = false;
+    bool releaseActive = false;
     float vel  = 0.0f;
     float aftertouch = 0.0f;
     std::vector<HeldNote> heldNotes;
@@ -631,6 +674,7 @@ private:
     float res     = 0.0f;     // 0..1
     float envmod  = 0.5f;     // 0..1-ish
     float decay   = 0.2f;     // seconds
+    float release = 0.15f;    // seconds
     float accent  = 0.0f;     // 0..1
     float glideMs = 0.0f;     // ms
     float drive   = 0.0f;     // 0..1
