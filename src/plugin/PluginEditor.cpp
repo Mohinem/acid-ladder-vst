@@ -437,6 +437,8 @@ AcidSynthAudioProcessorEditor::AcidSynthAudioProcessorEditor (AcidSynthAudioProc
         lfo1Rate.setEnabled (! lfo1SyncMode);
         lfo1RateLabel.setEnabled (! lfo1SyncMode);
         lfo1RateValueLabel.setEnabled (! lfo1SyncMode);
+        lfo1RateLabel.setVisible (! lfo1SyncMode);
+        lfo1RateValueLabel.setVisible (! lfo1SyncMode);
         lfo1Sync.setVisible (lfo1SyncMode);
         lfo1SyncLabel.setVisible (lfo1SyncMode);
         lfo1ModeLabel.setVisible (true);
@@ -445,6 +447,8 @@ AcidSynthAudioProcessorEditor::AcidSynthAudioProcessorEditor (AcidSynthAudioProc
         lfo2Rate.setEnabled (! lfo2SyncMode);
         lfo2RateLabel.setEnabled (! lfo2SyncMode);
         lfo2RateValueLabel.setEnabled (! lfo2SyncMode);
+        lfo2RateLabel.setVisible (! lfo2SyncMode);
+        lfo2RateValueLabel.setVisible (! lfo2SyncMode);
         lfo2Sync.setVisible (lfo2SyncMode);
         lfo2SyncLabel.setVisible (lfo2SyncMode);
         lfo2ModeLabel.setVisible (true);
