@@ -3,7 +3,7 @@
 
 AcidSynthAudioProcessorEditor::~AcidSynthAudioProcessorEditor()
 {
-    for (auto* s : { &wave, &cutoff, &res, &envmod, &decay, &accent, &glide, &drive, &sat, &sub, &unison,
+    for (auto* s : { &wave, &cutoff, &res, &envmod, &decay, &release, &accent, &glide, &drive, &sat, &sub, &unison,
                      &unisonSpread, &gain, &lfo1Rate, &lfo2Rate, &modEnvDecay, &mod1Amount, &mod2Amount, &mod3Amount,
                      &fxDrive, &fxChorus, &fxDelay, &fxDelayTime, &fxReverb })
         s->setLookAndFeel (nullptr);
@@ -154,6 +154,7 @@ AcidSynthAudioProcessorEditor::AcidSynthAudioProcessorEditor (AcidSynthAudioProc
     setupKnob (res);
     setupKnob (envmod);
     setupKnob (decay);
+    setupKnob (release);
     setupKnob (accent);
     setupKnob (glide);
     setupKnob (drive);
@@ -179,6 +180,7 @@ AcidSynthAudioProcessorEditor::AcidSynthAudioProcessorEditor (AcidSynthAudioProc
     addAndMakeVisible (res);
     addAndMakeVisible (envmod);
     addAndMakeVisible (decay);
+    addAndMakeVisible (release);
     addAndMakeVisible (accent);
     addAndMakeVisible (glide);
     addAndMakeVisible (drive);
@@ -320,6 +322,7 @@ AcidSynthAudioProcessorEditor::AcidSynthAudioProcessorEditor (AcidSynthAudioProc
 
     setupLabel (envmodLabel, "ENVMOD");
     setupLabel (decayLabel,  "DECAY");
+    setupLabel (releaseLabel, "RELEASE");
     setupLabel (accentLabel, "ACCENT");
 
     setupLabel (glideLabel,  "GLIDE");
@@ -347,6 +350,7 @@ AcidSynthAudioProcessorEditor::AcidSynthAudioProcessorEditor (AcidSynthAudioProc
     mod3AmountLabel.setVisible (false);
 
     for (auto* l : { &waveValueLabel, &cutoffValueLabel, &resValueLabel, &envmodValueLabel, &decayValueLabel,
+                     &releaseValueLabel,
                      &accentValueLabel, &glideValueLabel, &driveValueLabel, &satValueLabel, &subValueLabel,
                      &unisonValueLabel, &unisonSpreadValueLabel, &gainValueLabel, &lfo1RateValueLabel,
                      &lfo2RateValueLabel, &modEnvDecayValueLabel, &mod1AmountValueLabel, &mod2AmountValueLabel,
@@ -365,6 +369,7 @@ AcidSynthAudioProcessorEditor::AcidSynthAudioProcessorEditor (AcidSynthAudioProc
     aRes    = std::make_unique<Attachment> (apvts, "res",    res);
     aEnvmod = std::make_unique<Attachment> (apvts, "envmod", envmod);
     aDecay  = std::make_unique<Attachment> (apvts, "decay",  decay);
+    aRelease = std::make_unique<Attachment> (apvts, "release", release);
     aAccent = std::make_unique<Attachment> (apvts, "accent", accent);
     aGlide  = std::make_unique<Attachment> (apvts, "glide",  glide);
     aDrive  = std::make_unique<Attachment> (apvts, "drive",  drive);
@@ -397,7 +402,7 @@ AcidSynthAudioProcessorEditor::AcidSynthAudioProcessorEditor (AcidSynthAudioProc
     aFilterChar = std::make_unique<ComboAttachment> (apvts, "filterChar", filterChar);
 
     // --- Double-click reset
-    for (auto* s : { &wave, &cutoff, &res, &envmod, &decay, &accent, &glide, &drive, &sat, &sub, &unison,
+    for (auto* s : { &wave, &cutoff, &res, &envmod, &decay, &release, &accent, &glide, &drive, &sat, &sub, &unison,
                      &unisonSpread, &gain, &lfo1Rate, &lfo2Rate, &modEnvDecay, &mod1Amount, &mod2Amount, &mod3Amount,
                      &fxDrive, &fxChorus, &fxDelay, &fxDelayTime, &fxReverb })
         s->setDoubleClickReturnValue (true, s->getValue());
@@ -408,6 +413,7 @@ AcidSynthAudioProcessorEditor::AcidSynthAudioProcessorEditor (AcidSynthAudioProc
     resValueLabel.setText (formatValue (res), juce::dontSendNotification);
     envmodValueLabel.setText (formatValue (envmod), juce::dontSendNotification);
     decayValueLabel.setText (formatValue (decay), juce::dontSendNotification);
+    releaseValueLabel.setText (formatValue (release), juce::dontSendNotification);
     accentValueLabel.setText (formatValue (accent), juce::dontSendNotification);
     glideValueLabel.setText (formatValue (glide), juce::dontSendNotification);
     driveValueLabel.setText (formatValue (drive), juce::dontSendNotification);
@@ -433,6 +439,7 @@ AcidSynthAudioProcessorEditor::AcidSynthAudioProcessorEditor (AcidSynthAudioProc
     wireReadout (res,    "RES",    resValueLabel);
     wireReadout (envmod, "ENVMOD", envmodValueLabel);
     wireReadout (decay,  "DECAY",  decayValueLabel);
+    wireReadout (release, "RELEASE", releaseValueLabel);
     wireReadout (accent, "ACCENT", accentValueLabel);
     wireReadout (glide,  "GLIDE",  glideValueLabel);
     wireReadout (drive,  "DRIVE",  driveValueLabel);
@@ -586,6 +593,7 @@ void AcidSynthAudioProcessorEditor::resized()
 
     place (gainLabel,   gain,   gainValueLabel,   0, 3);
     placeCombo (filterCharLabel, filterChar, 1, 3);
+    place (releaseLabel, release, releaseValueLabel, 2, 3);
 
     // Mod/FX panel layout
     auto modFxArea = modFxPanel.reduced (18, 12);

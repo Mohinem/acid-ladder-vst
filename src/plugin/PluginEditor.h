@@ -27,20 +27,20 @@ private:
     juce::MidiKeyboardComponent keyboard;
 
     // Sliders
-    juce::Slider wave, cutoff, res, envmod, decay, accent, glide, drive, sat, sub, unison, unisonSpread, gain;
+    juce::Slider wave, cutoff, res, envmod, decay, release, accent, glide, drive, sat, sub, unison, unisonSpread, gain;
     juce::Slider lfo1Rate, lfo2Rate, modEnvDecay;
     juce::Slider mod1Amount, mod2Amount, mod3Amount;
     juce::Slider fxDrive, fxChorus, fxDelay, fxDelayTime, fxReverb;
     juce::ComboBox filterChar;
 
     // Labels (real components, not painted text)
-    juce::Label waveLabel, cutoffLabel, resLabel, envmodLabel, decayLabel, accentLabel, glideLabel,
+    juce::Label waveLabel, cutoffLabel, resLabel, envmodLabel, decayLabel, releaseLabel, accentLabel, glideLabel,
         driveLabel, satLabel, subLabel, unisonLabel, unisonSpreadLabel, gainLabel;
     juce::Label filterCharLabel;
     juce::Label lfo1RateLabel, lfo2RateLabel, modEnvDecayLabel;
     juce::Label mod1AmountLabel, mod2AmountLabel, mod3AmountLabel;
     juce::Label fxDriveLabel, fxChorusLabel, fxDelayLabel, fxDelayTimeLabel, fxReverbLabel;
-    juce::Label waveValueLabel, cutoffValueLabel, resValueLabel, envmodValueLabel, decayValueLabel,
+    juce::Label waveValueLabel, cutoffValueLabel, resValueLabel, envmodValueLabel, decayValueLabel, releaseValueLabel,
         accentValueLabel, glideValueLabel, driveValueLabel, satValueLabel, subValueLabel,
         unisonValueLabel, unisonSpreadValueLabel, gainValueLabel;
     juce::Label lfo1RateValueLabel, lfo2RateValueLabel, modEnvDecayValueLabel;
@@ -61,7 +61,7 @@ private:
     using Attachment = juce::AudioProcessorValueTreeState::SliderAttachment;
     using ComboAttachment = juce::AudioProcessorValueTreeState::ComboBoxAttachment;
 
-    std::unique_ptr<Attachment> aWave, aCutoff, aRes, aEnvmod, aDecay, aAccent, aGlide, aDrive,
+    std::unique_ptr<Attachment> aWave, aCutoff, aRes, aEnvmod, aDecay, aRelease, aAccent, aGlide, aDrive,
         aSat, aSub, aUnison, aUnisonSpread, aGain;
     std::unique_ptr<Attachment> aLfo1Rate, aLfo2Rate, aModEnvDecay;
     std::unique_ptr<Attachment> aMod1Amount, aMod2Amount, aMod3Amount;
