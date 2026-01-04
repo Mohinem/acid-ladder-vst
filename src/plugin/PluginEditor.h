@@ -19,6 +19,9 @@ private:
         void drawRotarySlider (juce::Graphics& g, int x, int y, int width, int height,
                                float sliderPosProportional, float rotaryStartAngle,
                                float rotaryEndAngle, juce::Slider& slider) override;
+        void drawLinearSlider (juce::Graphics& g, int x, int y, int width, int height,
+                               float sliderPos, float minSliderPos, float maxSliderPos,
+                               const juce::Slider::SliderStyle, juce::Slider& slider) override;
     };
 
     KnobLookAndFeel knobLookAndFeel;
@@ -29,6 +32,7 @@ private:
     // Sliders
     juce::Slider wave, cutoff, res, envmod, decay, release, accent, glide, drive, sat, sub, unison, unisonSpread, gain, volume;
     juce::Slider lfo1Rate, lfo2Rate, modEnvDecay;
+    juce::ComboBox lfo1Mode, lfo1Sync, lfo2Mode, lfo2Sync;
     juce::Slider mod1Amount, mod2Amount, mod3Amount;
     juce::Slider fxDrive, fxChorus, fxDelay, fxDelayTime, fxReverb;
     juce::ComboBox filterChar;
@@ -38,6 +42,7 @@ private:
         driveLabel, satLabel, subLabel, unisonLabel, unisonSpreadLabel, gainLabel, volumeLabel;
     juce::Label filterCharLabel;
     juce::Label lfo1RateLabel, lfo2RateLabel, modEnvDecayLabel;
+    juce::Label lfo1ModeLabel, lfo1SyncLabel, lfo2ModeLabel, lfo2SyncLabel;
     juce::Label mod1AmountLabel, mod2AmountLabel, mod3AmountLabel;
     juce::Label fxDriveLabel, fxChorusLabel, fxDelayLabel, fxDelayTimeLabel, fxReverbLabel;
     juce::Label waveValueLabel, cutoffValueLabel, resValueLabel, envmodValueLabel, decayValueLabel, releaseValueLabel,
@@ -68,6 +73,7 @@ private:
     std::unique_ptr<Attachment> aFxDrive, aFxChorus, aFxDelay, aFxDelayTime, aFxReverb;
     std::unique_ptr<ComboAttachment> aMod1Source, aMod1Dest, aMod2Source, aMod2Dest, aMod3Source, aMod3Dest;
     std::unique_ptr<ComboAttachment> aFilterChar;
+    std::unique_ptr<ComboAttachment> aLfo1Mode, aLfo1Sync, aLfo2Mode, aLfo2Sync;
 
     // Internal helpers
     void setupKnob (juce::Slider& s);
