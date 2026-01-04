@@ -18,6 +18,10 @@ void AcidSynthAudioProcessorEditor::setupKnob (juce::Slider& s)
     // Remove the clunky numeric boxes (prototype look)
     s.setTextBoxStyle (juce::Slider::NoTextBox, false, 0, 0);
 
+    s.setColour (juce::Slider::backgroundColourId, juce::Colour (0xff1b1b1b));
+    s.setColour (juce::Slider::trackColourId, juce::Colour (0xff48c6ff));
+    s.setColour (juce::Slider::thumbColourId, juce::Colour (0xfff3f3f3));
+
     s.setLookAndFeel (&knobLookAndFeel);
 
     // Direct horizontal dragging for slider-style controls
@@ -80,6 +84,38 @@ void AcidSynthAudioProcessorEditor::KnobLookAndFeel::drawRotarySlider (juce::Gra
     auto capBounds = juce::Rectangle<float> (centre.x - 4.0f, centre.y - 4.0f, 8.0f, 8.0f);
     g.setColour (juce::Colour (0xffd9d9d9));
     g.fillEllipse (capBounds);
+}
+
+void AcidSynthAudioProcessorEditor::KnobLookAndFeel::drawLinearSlider (juce::Graphics& g, int x, int y, int width, int height,
+                                                                       float sliderPos, float, float,
+                                                                       const juce::Slider::SliderStyle style,
+                                                                       juce::Slider& slider)
+{
+    if (style != juce::Slider::LinearHorizontal)
+    {
+        juce::LookAndFeel_V4::drawLinearSlider (g, x, y, width, height, sliderPos, 0.0f, 0.0f, style, slider);
+        return;
+    }
+
+    auto bounds = juce::Rectangle<float> ((float) x, (float) y, (float) width, (float) height);
+    auto trackHeight = juce::jmin (6.0f, bounds.getHeight() * 0.4f);
+    auto track = bounds.withHeight (trackHeight).withCentre (bounds.getCentre());
+
+    auto bgColour = slider.findColour (juce::Slider::backgroundColourId);
+    auto trackColour = slider.findColour (juce::Slider::trackColourId);
+    auto thumbColour = slider.findColour (juce::Slider::thumbColourId);
+
+    g.setColour (bgColour);
+    g.fillRoundedRectangle (track, trackHeight * 0.5f);
+
+    auto filled = track.withWidth (juce::jlimit (0.0f, track.getWidth(), sliderPos - track.getX()));
+    g.setColour (trackColour);
+    g.fillRoundedRectangle (filled, trackHeight * 0.5f);
+
+    auto thumbRadius = trackHeight * 0.9f;
+    auto thumbCentre = juce::Point<float> (sliderPos, track.getCentreY());
+    g.setColour (thumbColour);
+    g.fillEllipse (juce::Rectangle<float> (thumbRadius * 2.0f, thumbRadius * 2.0f).withCentre (thumbCentre));
 }
 
 //==============================================================================
@@ -523,7 +559,7 @@ AcidSynthAudioProcessorEditor::AcidSynthAudioProcessorEditor (AcidSynthAudioProc
 
     updateReadout ("CUTOFF", cutoff);
 
-    setSize (1020, 640);
+    setSize (1020, 900);
 }
 
 //==============================================================================
@@ -581,11 +617,13 @@ void AcidSynthAudioProcessorEditor::resized()
     auto content = area.reduced (10);
 
     // Keyboard strip
-    auto keyboardArea = content.removeFromBottom (100);
+    const int keyboardHeight = juce::jlimit (70, 100, (int) (content.getHeight() * 0.16f));
+    auto keyboardArea = content.removeFromBottom (keyboardHeight);
     keyboard.setBounds (keyboardArea.reduced (0, 8));
 
     // Mod/FX panel area
-    auto modFxPanel = content.removeFromBottom (240);
+    const int modFxHeight = juce::jlimit (260, 380, (int) (content.getHeight() * 0.45f));
+    auto modFxPanel = content.removeFromBottom (modFxHeight);
 
     // Knob panel area
     auto gridArea = content.reduced (18, 14);
@@ -710,7 +748,13 @@ void AcidSynthAudioProcessorEditor::resized()
     auto fxHeader = fxArea.removeFromTop (18);
     fxHeaderLabel.setBounds (fxHeader);
 
-    auto fxSourcesArea = fxArea.removeFromTop (110);
+    int fxSourcesHeight = juce::jlimit (90, 160, (int) (fxArea.getHeight() * 0.5f));
+    const int minFxControlsHeight = 130;
+    if (fxArea.getHeight() - fxSourcesHeight < minFxControlsHeight)
+        fxSourcesHeight = juce::jmax (60, fxArea.getHeight() - minFxControlsHeight);
+    fxSourcesHeight = juce::jmax (60, fxSourcesHeight);
+
+    auto fxSourcesArea = fxArea.removeFromTop (fxSourcesHeight);
     fxSourcesArea = fxSourcesArea.reduced (6, 4);
     const int fxSourceCellW = fxSourcesArea.getWidth() / 3;
     const int fxLabelHeight = 12;
@@ -762,7 +806,7 @@ void AcidSynthAudioProcessorEditor::resized()
                lfo2ModeLabel, lfo2Mode, lfo2SyncLabel, lfo2Sync, 1);
     fxSourceCell (modEnvDecayLabel, modEnvDecay, modEnvDecayValueLabel, 2);
 
-    auto fxControlsArea = fxArea.removeFromTop (fxArea.getHeight()).reduced (6, 8);
+    auto fxControlsArea = fxArea.reduced (6, 8);
     const int fxCols = 3;
     const int fxRows = 2;
     const int fxCellW = fxControlsArea.getWidth() / fxCols;
