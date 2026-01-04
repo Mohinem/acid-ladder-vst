@@ -203,6 +203,14 @@ AcidSynthAudioProcessorEditor::AcidSynthAudioProcessorEditor (AcidSynthAudioProc
     addAndMakeVisible (fxDelayTime);
     addAndMakeVisible (fxReverb);
 
+    for (auto* combo : { &lfo1Mode, &lfo1Sync, &lfo2Mode, &lfo2Sync })
+    {
+        combo->setColour (juce::ComboBox::backgroundColourId, juce::Colour (0xff1b1b1b));
+        combo->setColour (juce::ComboBox::textColourId, juce::Colours::white.withAlpha (0.9f));
+        combo->setColour (juce::ComboBox::outlineColourId, juce::Colours::white.withAlpha (0.2f));
+        addAndMakeVisible (*combo);
+    }
+
     for (auto* combo : { &mod1Source, &mod1Dest, &mod2Source, &mod2Dest, &mod3Source, &mod3Dest })
     {
         combo->setColour (juce::ComboBox::backgroundColourId, juce::Colour (0xff1b1b1b));
@@ -225,6 +233,8 @@ AcidSynthAudioProcessorEditor::AcidSynthAudioProcessorEditor (AcidSynthAudioProc
     const juce::StringArray modSources { "Off", "LFO 1", "LFO 2", "Mod Env", "Velocity", "Aftertouch" };
     const juce::StringArray modDests { "Off", "Cutoff", "Pitch", "Drive", "Gain", "Pan" };
     const juce::StringArray filterChars { "Classic 303", "Clean Ladder", "Aggressive", "Modern", "Screech" };
+    const juce::StringArray lfoModes { "Free", "Sync" };
+    const juce::StringArray lfoSyncs { "1/1", "1/2", "1/4", "1/8", "1/16", "1/32", "1/8D", "1/16D", "1/8T", "1/16T" };
 
     addModItems (mod1Source, modSources);
     addModItems (mod2Source, modSources);
@@ -235,6 +245,10 @@ AcidSynthAudioProcessorEditor::AcidSynthAudioProcessorEditor (AcidSynthAudioProc
     addModItems (mod3Dest, modDests);
 
     addModItems (filterChar, filterChars);
+    addModItems (lfo1Mode, lfoModes);
+    addModItems (lfo2Mode, lfoModes);
+    addModItems (lfo1Sync, lfoSyncs);
+    addModItems (lfo2Sync, lfoSyncs);
 
     mod1Source.setTooltip ("Mod 1 Source");
     mod1Dest.setTooltip ("Mod 1 Destination");
@@ -243,6 +257,10 @@ AcidSynthAudioProcessorEditor::AcidSynthAudioProcessorEditor (AcidSynthAudioProc
     mod3Source.setTooltip ("Mod 3 Source");
     mod3Dest.setTooltip ("Mod 3 Destination");
     filterChar.setTooltip ("Filter Character");
+    lfo1Mode.setTooltip ("LFO 1 Mode");
+    lfo1Sync.setTooltip ("LFO 1 Sync");
+    lfo2Mode.setTooltip ("LFO 2 Mode");
+    lfo2Sync.setTooltip ("LFO 2 Sync");
 
     // --- Keyboard
     addAndMakeVisible (keyboard);
@@ -339,6 +357,10 @@ AcidSynthAudioProcessorEditor::AcidSynthAudioProcessorEditor (AcidSynthAudioProc
     setupLabel (lfo1RateLabel, "LFO 1 RATE");
     setupLabel (lfo2RateLabel, "LFO 2 RATE");
     setupLabel (modEnvDecayLabel, "MOD ENV");
+    setupLabel (lfo1ModeLabel, "MODE");
+    setupLabel (lfo1SyncLabel, "SYNC");
+    setupLabel (lfo2ModeLabel, "MODE");
+    setupLabel (lfo2SyncLabel, "SYNC");
     setupLabel (mod1AmountLabel, "AMOUNT");
     setupLabel (mod2AmountLabel, "AMOUNT");
     setupLabel (mod3AmountLabel, "AMOUNT");
@@ -386,6 +408,10 @@ AcidSynthAudioProcessorEditor::AcidSynthAudioProcessorEditor (AcidSynthAudioProc
     aLfo1Rate = std::make_unique<Attachment> (apvts, "lfo1Rate", lfo1Rate);
     aLfo2Rate = std::make_unique<Attachment> (apvts, "lfo2Rate", lfo2Rate);
     aModEnvDecay = std::make_unique<Attachment> (apvts, "modEnvDecay", modEnvDecay);
+    aLfo1Mode = std::make_unique<ComboAttachment> (apvts, "lfo1Mode", lfo1Mode);
+    aLfo1Sync = std::make_unique<ComboAttachment> (apvts, "lfo1Sync", lfo1Sync);
+    aLfo2Mode = std::make_unique<ComboAttachment> (apvts, "lfo2Mode", lfo2Mode);
+    aLfo2Sync = std::make_unique<ComboAttachment> (apvts, "lfo2Sync", lfo2Sync);
 
     aMod1Amount = std::make_unique<Attachment> (apvts, "mod1Amount", mod1Amount);
     aMod2Amount = std::make_unique<Attachment> (apvts, "mod2Amount", mod2Amount);
@@ -404,6 +430,35 @@ AcidSynthAudioProcessorEditor::AcidSynthAudioProcessorEditor (AcidSynthAudioProc
     aMod3Source = std::make_unique<ComboAttachment> (apvts, "mod3Source", mod3Source);
     aMod3Dest = std::make_unique<ComboAttachment> (apvts, "mod3Dest", mod3Dest);
     aFilterChar = std::make_unique<ComboAttachment> (apvts, "filterChar", filterChar);
+
+    auto updateLfoUi = [this]
+    {
+        const bool lfo1SyncMode = (lfo1Mode.getSelectedItemIndex() == 1);
+        lfo1Rate.setEnabled (! lfo1SyncMode);
+        lfo1RateLabel.setEnabled (! lfo1SyncMode);
+        lfo1RateValueLabel.setEnabled (! lfo1SyncMode);
+        lfo1Rate.setVisible (! lfo1SyncMode);
+        lfo1RateLabel.setVisible (! lfo1SyncMode);
+        lfo1RateValueLabel.setVisible (! lfo1SyncMode);
+        lfo1Sync.setVisible (lfo1SyncMode);
+        lfo1SyncLabel.setVisible (lfo1SyncMode);
+        lfo1ModeLabel.setVisible (true);
+
+        const bool lfo2SyncMode = (lfo2Mode.getSelectedItemIndex() == 1);
+        lfo2Rate.setEnabled (! lfo2SyncMode);
+        lfo2RateLabel.setEnabled (! lfo2SyncMode);
+        lfo2RateValueLabel.setEnabled (! lfo2SyncMode);
+        lfo2Rate.setVisible (! lfo2SyncMode);
+        lfo2RateLabel.setVisible (! lfo2SyncMode);
+        lfo2RateValueLabel.setVisible (! lfo2SyncMode);
+        lfo2Sync.setVisible (lfo2SyncMode);
+        lfo2SyncLabel.setVisible (lfo2SyncMode);
+        lfo2ModeLabel.setVisible (true);
+    };
+
+    lfo1Mode.onChange = updateLfoUi;
+    lfo2Mode.onChange = updateLfoUi;
+    updateLfoUi();
 
     // --- Double-click reset
     for (auto* s : { &wave, &cutoff, &res, &envmod, &decay, &release, &accent, &glide, &drive, &sat, &sub, &unison,
@@ -655,7 +710,7 @@ void AcidSynthAudioProcessorEditor::resized()
     auto fxHeader = fxArea.removeFromTop (18);
     fxHeaderLabel.setBounds (fxHeader);
 
-    auto fxSourcesArea = fxArea.removeFromTop (78);
+    auto fxSourcesArea = fxArea.removeFromTop (110);
     fxSourcesArea = fxSourcesArea.reduced (6, 4);
     const int fxSourceCellW = fxSourcesArea.getWidth() / 3;
     const int fxLabelHeight = 12;
@@ -673,11 +728,41 @@ void AcidSynthAudioProcessorEditor::resized()
         s.setBounds (cell);
     };
 
-    fxSourceCell (lfo1RateLabel, lfo1Rate, lfo1RateValueLabel, 0);
-    fxSourceCell (lfo2RateLabel, lfo2Rate, lfo2RateValueLabel, 1);
+    auto fxLfoCell = [&](juce::Label& rateLabel, juce::Slider& rateSlider, juce::Label& valueLabel,
+                         juce::Label& modeLabel, juce::ComboBox& mode,
+                         juce::Label& syncLabel, juce::ComboBox& sync,
+                         int col)
+    {
+        auto cell = juce::Rectangle<int> (fxSourcesArea.getX() + col * fxSourceCellW,
+                                          fxSourcesArea.getY(),
+                                          fxSourceCellW,
+                                          fxSourcesArea.getHeight()).reduced (6, 0);
+        auto labelArea = cell.removeFromTop (fxLabelHeight);
+        rateLabel.setBounds (labelArea);
+        auto valueArea = cell.removeFromBottom (fxValueHeight);
+        valueLabel.setBounds (valueArea);
+
+        auto sliderArea = cell.removeFromTop (26);
+        rateSlider.setBounds (sliderArea);
+
+        auto modeLabelArea = cell.removeFromTop (12);
+        modeLabel.setBounds (modeLabelArea);
+        auto modeArea = cell.removeFromTop (18);
+        mode.setBounds (modeArea.withHeight (18).withCentre (modeArea.getCentre()));
+
+        auto syncLabelArea = cell.removeFromTop (12);
+        syncLabel.setBounds (syncLabelArea);
+        auto syncArea = cell.removeFromTop (18);
+        sync.setBounds (syncArea.withHeight (18).withCentre (syncArea.getCentre()));
+    };
+
+    fxLfoCell (lfo1RateLabel, lfo1Rate, lfo1RateValueLabel,
+               lfo1ModeLabel, lfo1Mode, lfo1SyncLabel, lfo1Sync, 0);
+    fxLfoCell (lfo2RateLabel, lfo2Rate, lfo2RateValueLabel,
+               lfo2ModeLabel, lfo2Mode, lfo2SyncLabel, lfo2Sync, 1);
     fxSourceCell (modEnvDecayLabel, modEnvDecay, modEnvDecayValueLabel, 2);
 
-    auto fxControlsArea = fxArea.removeFromTop (120).reduced (6, 8);
+    auto fxControlsArea = fxArea.removeFromTop (fxArea.getHeight()).reduced (6, 8);
     const int fxCols = 3;
     const int fxRows = 2;
     const int fxCellW = fxControlsArea.getWidth() / fxCols;

@@ -51,6 +51,11 @@ public:
 
         // legacy lp not used anymore, but keep zeroed in case you referenced it elsewhere
         lp = 0.0f;
+
+        lfo1FreqSmoothed.reset (sr, 0.03f);
+        lfo2FreqSmoothed.reset (sr, 0.03f);
+        lfo1FreqSmoothed.setCurrentAndTargetValue (lfo1Rate);
+        lfo2FreqSmoothed.setCurrentAndTargetValue (lfo2Rate);
     }
 
     void setParams (float waveIn, float cutoffIn, float resIn, float envmodIn,
@@ -98,6 +103,8 @@ public:
 
         lfo1Rate = lfo1RateIn;
         lfo2Rate = lfo2RateIn;
+        lfo1FreqSmoothed.setTargetValue (lfo1RateIn);
+        lfo2FreqSmoothed.setTargetValue (lfo2RateIn);
         modEnvDecay = modEnvDecayIn;
 
         const float d = juce::jmax (0.01f, modEnvDecay);
@@ -208,8 +215,10 @@ public:
             currentFreq = targetFreq;
 
         // --- modulation sources ---
-        lfo1Phase += lfo1Rate / sr;
-        lfo2Phase += lfo2Rate / sr;
+        const float lfo1RateStep = lfo1FreqSmoothed.getNextValue();
+        const float lfo2RateStep = lfo2FreqSmoothed.getNextValue();
+        lfo1Phase += lfo1RateStep / sr;
+        lfo2Phase += lfo2RateStep / sr;
         if (lfo1Phase >= 1.0f) lfo1Phase -= 1.0f;
         if (lfo2Phase >= 1.0f) lfo2Phase -= 1.0f;
 
@@ -691,6 +700,8 @@ private:
     float lfo2Rate = 1.25f;
     float modEnvDecay = 0.3f;
     std::array<ModSlot, 3> slots {};
+    juce::SmoothedValue<float> lfo1FreqSmoothed;
+    juce::SmoothedValue<float> lfo2FreqSmoothed;
 
     // --- filter state (ladder-ish) ---
     FilterState filterL;
