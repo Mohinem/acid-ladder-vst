@@ -1,6 +1,52 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
+namespace
+{
+    constexpr double kFallbackBpm = 120.0;
+
+    double getHostBpm (juce::AudioPlayHead* playHead)
+    {
+        if (playHead != nullptr)
+        {
+            juce::AudioPlayHead::CurrentPositionInfo info;
+            if (playHead->getCurrentPosition (info) && info.bpm > 0.0)
+                return info.bpm;
+        }
+
+        return kFallbackBpm;
+    }
+
+    float getSyncPeriodMultiplier (int syncIndex)
+    {
+        switch (syncIndex)
+        {
+            case 0: return 4.0f;          // 1/1
+            case 1: return 2.0f;          // 1/2
+            case 2: return 1.0f;          // 1/4
+            case 3: return 0.5f;          // 1/8
+            case 4: return 0.25f;         // 1/16
+            case 5: return 0.125f;        // 1/32
+            case 6: return 0.75f;         // 1/8D
+            case 7: return 0.375f;        // 1/16D
+            case 8: return (1.0f / 3.0f); // 1/8T
+            case 9: return (1.0f / 6.0f); // 1/16T
+            default: return 0.5f;         // default to 1/8
+        }
+    }
+
+    float getSyncedLfoRateHz (double bpm, int syncIndex)
+    {
+        const double safeBpm = (bpm > 0.0) ? bpm : kFallbackBpm;
+        const double quarterSeconds = 60.0 / safeBpm;
+        const double periodSeconds = quarterSeconds * getSyncPeriodMultiplier (syncIndex);
+        if (periodSeconds <= 0.0)
+            return 0.0f;
+
+        return static_cast<float> (1.0 / periodSeconds);
+    }
+}
+
 /*
 Manual test procedure (Acid 303 Accent + Slide):
 1) Hold a note, press another while holding first -> glide without retrigger; filter state stays continuous.
@@ -84,9 +130,16 @@ juce::AudioProcessorValueTreeState::ParameterLayout AcidSynthAudioProcessor::cre
     p.push_back (std::make_unique<AudioParameterFloat> ("volume", "Volume",
                                                         NormalisableRange<float>(0.0f, 1.5f), 0.9f));
 
+    auto lfoModes = StringArray { "Free", "Sync" };
+    auto lfoSyncs = StringArray { "1/1", "1/2", "1/4", "1/8", "1/16", "1/32", "1/8D", "1/16D", "1/8T", "1/16T" };
+
+    p.push_back (std::make_unique<AudioParameterChoice> ("lfo1Mode", "LFO 1 Mode", lfoModes, 0));
+    p.push_back (std::make_unique<AudioParameterChoice> ("lfo1Sync", "LFO 1 Sync", lfoSyncs, 3));
     p.push_back (std::make_unique<AudioParameterFloat> ("lfo1Rate", "LFO 1 Rate",
                                                         NormalisableRange<float>(0.0f, 15.0f, 0.0f, 0.5f), 2.2f));
 
+    p.push_back (std::make_unique<AudioParameterChoice> ("lfo2Mode", "LFO 2 Mode", lfoModes, 0));
+    p.push_back (std::make_unique<AudioParameterChoice> ("lfo2Sync", "LFO 2 Sync", lfoSyncs, 3));
     p.push_back (std::make_unique<AudioParameterFloat> ("lfo2Rate", "LFO 2 Rate",
                                                         NormalisableRange<float>(0.0f, 15.0f, 0.0f, 0.5f), 4.8f));
 
@@ -183,7 +236,11 @@ void AcidSynthAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, ju
     const float gain   = getParam (apvts, "gain");
     const float volume = getParam (apvts, "volume");
 
+    const int lfo1Mode = (int) getParam (apvts, "lfo1Mode");
+    const int lfo1Sync = (int) getParam (apvts, "lfo1Sync");
     const float lfo1Rate = getParam (apvts, "lfo1Rate");
+    const int lfo2Mode = (int) getParam (apvts, "lfo2Mode");
+    const int lfo2Sync = (int) getParam (apvts, "lfo2Sync");
     const float lfo2Rate = getParam (apvts, "lfo2Rate");
     const float modEnvDecay = getParam (apvts, "modEnvDecay");
 
@@ -205,11 +262,15 @@ void AcidSynthAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, ju
     const float fxDelayTime = getParam (apvts, "fxDelayTime");
     const float fxReverb = getParam (apvts, "fxReverb");
 
+    const double bpm = getHostBpm (getPlayHead());
+    const float lfo1TargetRate = (lfo1Mode == 0) ? lfo1Rate : getSyncedLfoRateHz (bpm, lfo1Sync);
+    const float lfo2TargetRate = (lfo2Mode == 0) ? lfo2Rate : getSyncedLfoRateHz (bpm, lfo2Sync);
+
     voice.setParams (wave, cutoff, res, envmod, decay, release, accent, glide, drive, sat, subMix, unison, unisonSpread, gain, filterChar);
     voice.setModMatrix (mod1Source, mod1Dest, mod1Amount,
                         mod2Source, mod2Dest, mod2Amount,
                         mod3Source, mod3Dest, mod3Amount,
-                        lfo1Rate, lfo2Rate, modEnvDecay);
+                        lfo1TargetRate, lfo2TargetRate, modEnvDecay);
 
     // handle MIDI (mono)
     for (const auto metadata : midi)
