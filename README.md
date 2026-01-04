@@ -17,10 +17,11 @@ A monophonic acid‑style synthesizer plugin built in C++ with JUCE. It combines
 - Saw ↔ square morph oscillator with sub‑oscillator blend
 - Nonlinear 4‑pole ladder low‑pass filter with selectable character modes
 - Accent and glide (portamento)
-- Decay‑only envelope (303‑style) plus a separate modulation envelope
+- Decay + release envelope (303‑style) plus a separate modulation envelope
 - Unison detune/spread with stereo panning
 - Modulation matrix with 3 assignable slots (including pan destination)
 - Built‑in FX chain: drive, chorus, delay, reverb
+- Master output volume control
 - On‑screen keyboard for quick auditioning
 - VST3 output (optional VST2 with SDK)
 
@@ -40,6 +41,7 @@ All parameters are exposed via the plugin’s GUI and the host automation system
 | Filter Character | Classic 303 → Screech | Classic 303 | Filter response model (Classic 303, Clean Ladder, Aggressive, Modern, Screech). |
 | Env Mod | 0.0 → 1.0 | 0.55 | Filter envelope modulation depth. |
 | Decay | 0.01 → 2.0 s | 0.18 s | Main amplitude envelope decay. |
+| Release | 0.0 → 1.5 s | 0.12 s | Main amplitude envelope release. |
 | Accent | 0.0 → 1.0 | 0.75 | Accent amount applied on note on. |
 | Glide (ms) | 0 → 500 ms | 80 ms | Portamento time. |
 | Drive | 0.0 → 1.0 | 0.2 | Pre‑filter drive. |
@@ -48,6 +50,7 @@ All parameters are exposed via the plugin’s GUI and the host automation system
 | Unison | 0.0 → 1.0 | 0.0 | Unison amount (dual detune). |
 | Unison Spread | 0.0 → 1.0 | 0.2 | Unison stereo spread. |
 | Gain | 0.0 → 1.5 | 0.85 | Output gain. |
+| Volume | 0.0 → 1.5 | 0.9 | Master output volume after FX. |
 | LFO 1 Rate | 0.0 → 15 Hz | 2.2 Hz | LFO 1 frequency. |
 | LFO 2 Rate | 0.0 → 15 Hz | 4.8 Hz | LFO 2 frequency. |
 | Mod Env Decay | 0.0 → 2.5 s | 0.55 s | Modulation envelope decay. |
