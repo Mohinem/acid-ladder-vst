@@ -4,7 +4,7 @@
 AcidSynthAudioProcessorEditor::~AcidSynthAudioProcessorEditor()
 {
     for (auto* s : { &wave, &cutoff, &res, &envmod, &decay, &release, &accent, &glide, &drive, &sat, &sub, &unison,
-                     &unisonSpread, &gain, &lfo1Rate, &lfo2Rate, &modEnvDecay, &mod1Amount, &mod2Amount, &mod3Amount,
+                     &unisonSpread, &gain, &volume, &lfo1Rate, &lfo2Rate, &modEnvDecay, &mod1Amount, &mod2Amount, &mod3Amount,
                      &fxDrive, &fxChorus, &fxDelay, &fxDelayTime, &fxReverb })
         s->setLookAndFeel (nullptr);
 }
@@ -163,6 +163,7 @@ AcidSynthAudioProcessorEditor::AcidSynthAudioProcessorEditor (AcidSynthAudioProc
     setupKnob (unison);
     setupKnob (unisonSpread);
     setupKnob (gain);
+    setupKnob (volume);
     setupKnob (lfo1Rate);
     setupKnob (lfo2Rate);
     setupKnob (modEnvDecay);
@@ -189,6 +190,7 @@ AcidSynthAudioProcessorEditor::AcidSynthAudioProcessorEditor (AcidSynthAudioProc
     addAndMakeVisible (unison);
     addAndMakeVisible (unisonSpread);
     addAndMakeVisible (gain);
+    addAndMakeVisible (volume);
     addAndMakeVisible (lfo1Rate);
     addAndMakeVisible (lfo2Rate);
     addAndMakeVisible (modEnvDecay);
@@ -332,6 +334,7 @@ AcidSynthAudioProcessorEditor::AcidSynthAudioProcessorEditor (AcidSynthAudioProc
     setupLabel (unisonLabel, "UNISON");
     setupLabel (unisonSpreadLabel, "SPREAD");
     setupLabel (gainLabel,   "GAIN");
+    setupLabel (volumeLabel, "VOLUME");
     setupLabel (filterCharLabel, "FILTER CHAR");
     setupLabel (lfo1RateLabel, "LFO 1 RATE");
     setupLabel (lfo2RateLabel, "LFO 2 RATE");
@@ -352,7 +355,7 @@ AcidSynthAudioProcessorEditor::AcidSynthAudioProcessorEditor (AcidSynthAudioProc
     for (auto* l : { &waveValueLabel, &cutoffValueLabel, &resValueLabel, &envmodValueLabel, &decayValueLabel,
                      &releaseValueLabel,
                      &accentValueLabel, &glideValueLabel, &driveValueLabel, &satValueLabel, &subValueLabel,
-                     &unisonValueLabel, &unisonSpreadValueLabel, &gainValueLabel, &lfo1RateValueLabel,
+                     &unisonValueLabel, &unisonSpreadValueLabel, &gainValueLabel, &volumeValueLabel, &lfo1RateValueLabel,
                      &lfo2RateValueLabel, &modEnvDecayValueLabel, &mod1AmountValueLabel, &mod2AmountValueLabel,
                      &mod3AmountValueLabel, &fxDriveValueLabel, &fxChorusValueLabel, &fxDelayValueLabel,
                      &fxDelayTimeValueLabel, &fxReverbValueLabel })
@@ -378,6 +381,7 @@ AcidSynthAudioProcessorEditor::AcidSynthAudioProcessorEditor (AcidSynthAudioProc
     aUnison = std::make_unique<Attachment> (apvts, "unison", unison);
     aUnisonSpread = std::make_unique<Attachment> (apvts, "unisonSpread", unisonSpread);
     aGain   = std::make_unique<Attachment> (apvts, "gain",   gain);
+    aVolume = std::make_unique<Attachment> (apvts, "volume", volume);
 
     aLfo1Rate = std::make_unique<Attachment> (apvts, "lfo1Rate", lfo1Rate);
     aLfo2Rate = std::make_unique<Attachment> (apvts, "lfo2Rate", lfo2Rate);
@@ -403,7 +407,7 @@ AcidSynthAudioProcessorEditor::AcidSynthAudioProcessorEditor (AcidSynthAudioProc
 
     // --- Double-click reset
     for (auto* s : { &wave, &cutoff, &res, &envmod, &decay, &release, &accent, &glide, &drive, &sat, &sub, &unison,
-                     &unisonSpread, &gain, &lfo1Rate, &lfo2Rate, &modEnvDecay, &mod1Amount, &mod2Amount, &mod3Amount,
+                     &unisonSpread, &gain, &volume, &lfo1Rate, &lfo2Rate, &modEnvDecay, &mod1Amount, &mod2Amount, &mod3Amount,
                      &fxDrive, &fxChorus, &fxDelay, &fxDelayTime, &fxReverb })
         s->setDoubleClickReturnValue (true, s->getValue());
 
@@ -422,6 +426,7 @@ AcidSynthAudioProcessorEditor::AcidSynthAudioProcessorEditor (AcidSynthAudioProc
     unisonValueLabel.setText (formatValue (unison), juce::dontSendNotification);
     unisonSpreadValueLabel.setText (formatValue (unisonSpread), juce::dontSendNotification);
     gainValueLabel.setText (formatValue (gain), juce::dontSendNotification);
+    volumeValueLabel.setText (formatValue (volume), juce::dontSendNotification);
     lfo1RateValueLabel.setText (formatValue (lfo1Rate), juce::dontSendNotification);
     lfo2RateValueLabel.setText (formatValue (lfo2Rate), juce::dontSendNotification);
     modEnvDecayValueLabel.setText (formatValue (modEnvDecay), juce::dontSendNotification);
@@ -448,6 +453,7 @@ AcidSynthAudioProcessorEditor::AcidSynthAudioProcessorEditor (AcidSynthAudioProc
     wireReadout (unison, "UNISON", unisonValueLabel);
     wireReadout (unisonSpread, "SPREAD", unisonSpreadValueLabel);
     wireReadout (gain,   "GAIN",   gainValueLabel);
+    wireReadout (volume, "VOLUME", volumeValueLabel);
     wireReadout (lfo1Rate, "LFO 1 RATE", lfo1RateValueLabel);
     wireReadout (lfo2Rate, "LFO 2 RATE", lfo2RateValueLabel);
     wireReadout (modEnvDecay, "MOD ENV", modEnvDecayValueLabel);
@@ -594,6 +600,7 @@ void AcidSynthAudioProcessorEditor::resized()
     place (gainLabel,   gain,   gainValueLabel,   0, 3);
     placeCombo (filterCharLabel, filterChar, 1, 3);
     place (releaseLabel, release, releaseValueLabel, 2, 3);
+    place (volumeLabel, volume, volumeValueLabel, 3, 3);
 
     // Mod/FX panel layout
     auto modFxArea = modFxPanel.reduced (18, 12);

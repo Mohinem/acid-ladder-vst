@@ -81,6 +81,9 @@ juce::AudioProcessorValueTreeState::ParameterLayout AcidSynthAudioProcessor::cre
     p.push_back (std::make_unique<AudioParameterFloat> ("gain",   "Gain",
                                                         NormalisableRange<float>(0.0f, 1.5f), 0.85f));
 
+    p.push_back (std::make_unique<AudioParameterFloat> ("volume", "Volume",
+                                                        NormalisableRange<float>(0.0f, 1.5f), 0.9f));
+
     p.push_back (std::make_unique<AudioParameterFloat> ("lfo1Rate", "LFO 1 Rate",
                                                         NormalisableRange<float>(0.0f, 15.0f, 0.0f, 0.5f), 2.2f));
 
@@ -178,6 +181,7 @@ void AcidSynthAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, ju
     const float unison = getParam (apvts, "unison");
     const float unisonSpread = getParam (apvts, "unisonSpread");
     const float gain   = getParam (apvts, "gain");
+    const float volume = getParam (apvts, "volume");
 
     const float lfo1Rate = getParam (apvts, "lfo1Rate");
     const float lfo2Rate = getParam (apvts, "lfo2Rate");
@@ -319,6 +323,9 @@ void AcidSynthAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, ju
             reverb.processMono (buffer.getWritePointer (0), numSamples);
         }
     }
+
+    if (volume != 1.0f)
+        buffer.applyGain (volume);
 }
 
 bool AcidSynthAudioProcessor::hasEditor() const

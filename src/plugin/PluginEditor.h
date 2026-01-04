@@ -27,7 +27,7 @@ private:
     juce::MidiKeyboardComponent keyboard;
 
     // Sliders
-    juce::Slider wave, cutoff, res, envmod, decay, release, accent, glide, drive, sat, sub, unison, unisonSpread, gain;
+    juce::Slider wave, cutoff, res, envmod, decay, release, accent, glide, drive, sat, sub, unison, unisonSpread, gain, volume;
     juce::Slider lfo1Rate, lfo2Rate, modEnvDecay;
     juce::Slider mod1Amount, mod2Amount, mod3Amount;
     juce::Slider fxDrive, fxChorus, fxDelay, fxDelayTime, fxReverb;
@@ -35,14 +35,14 @@ private:
 
     // Labels (real components, not painted text)
     juce::Label waveLabel, cutoffLabel, resLabel, envmodLabel, decayLabel, releaseLabel, accentLabel, glideLabel,
-        driveLabel, satLabel, subLabel, unisonLabel, unisonSpreadLabel, gainLabel;
+        driveLabel, satLabel, subLabel, unisonLabel, unisonSpreadLabel, gainLabel, volumeLabel;
     juce::Label filterCharLabel;
     juce::Label lfo1RateLabel, lfo2RateLabel, modEnvDecayLabel;
     juce::Label mod1AmountLabel, mod2AmountLabel, mod3AmountLabel;
     juce::Label fxDriveLabel, fxChorusLabel, fxDelayLabel, fxDelayTimeLabel, fxReverbLabel;
     juce::Label waveValueLabel, cutoffValueLabel, resValueLabel, envmodValueLabel, decayValueLabel, releaseValueLabel,
         accentValueLabel, glideValueLabel, driveValueLabel, satValueLabel, subValueLabel,
-        unisonValueLabel, unisonSpreadValueLabel, gainValueLabel;
+        unisonValueLabel, unisonSpreadValueLabel, gainValueLabel, volumeValueLabel;
     juce::Label lfo1RateValueLabel, lfo2RateValueLabel, modEnvDecayValueLabel;
     juce::Label mod1AmountValueLabel, mod2AmountValueLabel, mod3AmountValueLabel;
     juce::Label fxDriveValueLabel, fxChorusValueLabel, fxDelayValueLabel, fxDelayTimeValueLabel, fxReverbValueLabel;
@@ -62,7 +62,7 @@ private:
     using ComboAttachment = juce::AudioProcessorValueTreeState::ComboBoxAttachment;
 
     std::unique_ptr<Attachment> aWave, aCutoff, aRes, aEnvmod, aDecay, aRelease, aAccent, aGlide, aDrive,
-        aSat, aSub, aUnison, aUnisonSpread, aGain;
+        aSat, aSub, aUnison, aUnisonSpread, aGain, aVolume;
     std::unique_ptr<Attachment> aLfo1Rate, aLfo2Rate, aModEnvDecay;
     std::unique_ptr<Attachment> aMod1Amount, aMod2Amount, aMod3Amount;
     std::unique_ptr<Attachment> aFxDrive, aFxChorus, aFxDelay, aFxDelayTime, aFxReverb;
