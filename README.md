@@ -1,6 +1,6 @@
 # Acid Ladder VST
 
-A monophonic acid‑style synthesizer plugin built in C++ with JUCE. It combines a classic saw↔square oscillator, a nonlinear 4‑pole ladder filter with selectable character modes, and a compact modulation matrix with modern conveniences like unison, sub‑oscillator blend, pan modulation, and built‑in FX.
+A monophonic acid‑style synthesizer plugin built in C++ with JUCE. It combines a wavetable oscillator, a nonlinear 4‑pole ladder filter with selectable character modes, and a compact modulation matrix with modern conveniences like unison, sub‑oscillator blend, pan modulation, and built‑in FX.
 
 ## Table of Contents
 - [Features](#features)
@@ -14,12 +14,12 @@ A monophonic acid‑style synthesizer plugin built in C++ with JUCE. It combines
 - [Notes](#notes)
 
 ## Features
-- Saw ↔ square morph oscillator with sub‑oscillator blend
+- Wavetable oscillator with 6 discrete shapes (sine → triangle → saw → square → pulse → bright/buzz)
 - Nonlinear 4‑pole ladder low‑pass filter with selectable character modes
 - Accent and glide (portamento)
 - Decay + release envelope (303‑style) plus a separate modulation envelope
 - Unison detune/spread with stereo panning
-- Modulation matrix with 3 assignable slots (including pan destination)
+- Modulation matrix with 3 assignable slots (including resonance and wavetable position)
 - Built‑in FX chain: drive, chorus, delay, reverb
 - Master output volume control
 - On‑screen keyboard for quick auditioning
@@ -35,7 +35,7 @@ All parameters are exposed via the plugin’s GUI and the host automation system
 
 | Parameter | Range | Default | Description |
 | --- | --- | --- | --- |
-| Wave | 0.0 → 1.0 | 0.0 | Saw ↔ square morph (0 = saw, 1 = square). |
+| Wave | 0.0 → 1.0 (stepped) | 0.0 | Wavetable position across 6 discrete shapes. |
 | Cutoff | 20 Hz → 18 kHz | 800 Hz | Filter cutoff frequency. |
 | Resonance | 0.0 → 0.995 | 0.3 | Ladder filter resonance. |
 | Filter Character | Classic 303 → Screech | Classic 303 | Filter response model (Classic 303, Clean Ladder, Aggressive, Modern, Screech). |
@@ -55,13 +55,13 @@ All parameters are exposed via the plugin’s GUI and the host automation system
 | LFO 2 Rate | 0.0 → 15 Hz | 4.8 Hz | LFO 2 frequency. |
 | Mod Env Decay | 0.0 → 2.5 s | 0.55 s | Modulation envelope decay. |
 | Mod 1 Source | Off → Aftertouch | Off | Mod slot 1 source. |
-| Mod 1 Dest | Off → Pan | Off | Mod slot 1 destination. |
+| Mod 1 Dest | Off → WT Pos | Off | Mod slot 1 destination. |
 | Mod 1 Amount | -1.0 → 1.0 | 0.0 | Mod slot 1 depth. |
 | Mod 2 Source | Off → Aftertouch | Off | Mod slot 2 source. |
-| Mod 2 Dest | Off → Pan | Off | Mod slot 2 destination. |
+| Mod 2 Dest | Off → WT Pos | Off | Mod slot 2 destination. |
 | Mod 2 Amount | -1.0 → 1.0 | 0.0 | Mod slot 2 depth. |
 | Mod 3 Source | Off → Aftertouch | Off | Mod slot 3 source. |
-| Mod 3 Dest | Off → Pan | Off | Mod slot 3 destination. |
+| Mod 3 Dest | Off → WT Pos | Off | Mod slot 3 destination. |
 | Mod 3 Amount | -1.0 → 1.0 | 0.0 | Mod slot 3 depth. |
 | FX Drive | 0.0 → 1.0 | 0.15 | FX drive amount. |
 | Chorus | 0.0 → 1.0 | 0.18 | Chorus mix. |
@@ -87,6 +87,8 @@ The synth exposes three modulation slots with selectable sources and destination
 - Drive
 - Gain
 - Pan
+- Resonance
+- WT Pos
 
 Set the source/destination for each slot and dial in the amount (negative values invert the modulation).
 
