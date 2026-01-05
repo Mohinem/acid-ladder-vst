@@ -275,6 +275,7 @@ public:
         float modDrive = 0.0f;
         float modGain = 0.0f;
         float modPan = 0.0f;
+        float modRes = 0.0f;
 
         for (const auto& slot : slots)
         {
@@ -297,6 +298,9 @@ public:
                     break;
                 case 5: // Pan
                     modPan += source * amount;
+                    break;
+                case 6: // Resonance
+                    modRes += source * amount * 0.35f;
                     break;
                 default:
                     break;
@@ -360,7 +364,7 @@ public:
         // Resonance amount. This is "by ear" scaling.
         // Make sure the full knob range is audibly effective.
         // Too high without clipping can explode, so we soft-clip the loop.
-        const float resAccented = juce::jlimit (0.0f, 0.995f, res + 0.08f * accentTotal);
+        const float resAccented = juce::jlimit (0.0f, 0.995f, res + modRes + 0.08f * accentTotal);
         const float resNorm = juce::jlimit (0.0f, 1.0f, resAccented);
         const float resCurve = std::pow (resNorm, 1.35f);
         float kBase = juce::jmap (resCurve, 0.0f, 1.0f, 0.0f, 4.8f);

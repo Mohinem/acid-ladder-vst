@@ -80,7 +80,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout AcidSynthAudioProcessor::cre
     std::vector<std::unique_ptr<RangedAudioParameter>> p;
 
     auto modSources = StringArray { "Off", "LFO 1", "LFO 2", "Mod Env", "Velocity", "Aftertouch" };
-    auto modDests = StringArray { "Off", "Cutoff", "Pitch", "Drive", "Gain", "Pan" };
+    auto modDests = StringArray { "Off", "Cutoff", "Pitch", "Drive", "Gain", "Pan", "Resonance" };
 
     p.push_back (std::make_unique<AudioParameterFloat> ("wave",   "Wave",
                                                         NormalisableRange<float>(0.0f, 1.0f), 0.0f));

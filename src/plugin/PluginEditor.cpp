@@ -301,7 +301,7 @@ AcidSynthAudioProcessorEditor::AcidSynthAudioProcessorEditor (AcidSynthAudioProc
     };
 
     const juce::StringArray modSources { "Off", "LFO 1", "LFO 2", "Mod Env", "Velocity", "Aftertouch" };
-    const juce::StringArray modDests { "Off", "Cutoff", "Pitch", "Drive", "Gain", "Pan" };
+    const juce::StringArray modDests { "Off", "Cutoff", "Pitch", "Drive", "Gain", "Pan", "Resonance" };
     const juce::StringArray filterChars { "Classic 303", "Clean Ladder", "Aggressive", "Modern", "Screech" };
     const juce::StringArray lfoModes { "Free", "Sync" };
     const juce::StringArray lfoSyncs { "1/1", "1/2", "1/4", "1/8", "1/16", "1/32", "1/8D", "1/16D", "1/8T", "1/16T" };
