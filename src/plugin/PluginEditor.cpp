@@ -1,6 +1,25 @@
 // src/plugin/PluginEditor.cpp
 #include "PluginEditor.h"
 
+namespace
+{
+    const juce::Colour kBgTop (0xff111419);
+    const juce::Colour kBgBottom (0xff0a0b0d);
+    const juce::Colour kPanelTop (0xff1b2128);
+    const juce::Colour kPanelBottom (0xff14181d);
+    const juce::Colour kPanelEdge (0xff2a323a);
+    const juce::Colour kPanelInner (0xff222830);
+    const juce::Colour kTextPrimary (0xffe6ecf2);
+    const juce::Colour kTextSecondary (0xffc3cbd4);
+    const juce::Colour kTextMuted (0xff8f98a3);
+    const juce::Colour kAccent (0xff3db7ff);
+    const juce::Colour kAccentGlow (0xff7fd4ff);
+    const juce::Colour kControlBg (0xff171b20);
+    const juce::Colour kControlEdge (0xff303740);
+
+    constexpr float kPanelCorner = 12.0f;
+}
+
 AcidSynthAudioProcessorEditor::~AcidSynthAudioProcessorEditor()
 {
     for (auto* s : { &wave, &cutoff, &res, &envmod, &decay, &release, &accent, &glide, &drive, &sat, &sub, &unison,
@@ -18,9 +37,11 @@ void AcidSynthAudioProcessorEditor::setupKnob (juce::Slider& s)
     // Remove the clunky numeric boxes (prototype look)
     s.setTextBoxStyle (juce::Slider::NoTextBox, false, 0, 0);
 
-    s.setColour (juce::Slider::backgroundColourId, juce::Colour (0xff1b1b1b));
-    s.setColour (juce::Slider::trackColourId, juce::Colour (0xff48c6ff));
-    s.setColour (juce::Slider::thumbColourId, juce::Colour (0xfff3f3f3));
+    s.setColour (juce::Slider::backgroundColourId, kControlBg);
+    s.setColour (juce::Slider::trackColourId, kAccent);
+    s.setColour (juce::Slider::thumbColourId, kTextPrimary);
+    s.setColour (juce::Slider::rotarySliderFillColourId, kAccent);
+    s.setColour (juce::Slider::rotarySliderOutlineColourId, kControlEdge);
 
     s.setLookAndFeel (&knobLookAndFeel);
 
@@ -49,25 +70,25 @@ void AcidSynthAudioProcessorEditor::KnobLookAndFeel::drawRotarySlider (juce::Gra
     g.fillEllipse (rimBounds);
 
     auto faceBounds = rimBounds.reduced (5.5f);
-    juce::ColourGradient faceGradient (juce::Colour (0xff3a3a3a), faceBounds.getCentreX(), faceBounds.getY(),
-                                       juce::Colour (0xff0c0c0c), faceBounds.getCentreX(), faceBounds.getBottom(), false);
+    juce::ColourGradient faceGradient (kPanelTop, faceBounds.getCentreX(), faceBounds.getY(),
+                                       kPanelBottom, faceBounds.getCentreX(), faceBounds.getBottom(), false);
     g.setGradientFill (faceGradient);
     g.fillEllipse (faceBounds);
 
-    g.setColour (juce::Colour (0xff5f5f5f));
+    g.setColour (kPanelEdge);
     g.drawEllipse (rimBounds, 1.2f);
 
     auto arcRadius = radius - 5.0f;
     juce::Path backgroundArc;
     backgroundArc.addArc (centre.x - arcRadius, centre.y - arcRadius, arcRadius * 2.0f, arcRadius * 2.0f,
                           rotaryStartAngle, rotaryEndAngle, true);
-    g.setColour (juce::Colour (0xff2f2f2f));
+    g.setColour (kControlEdge);
     g.strokePath (backgroundArc, juce::PathStrokeType (3.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
 
     juce::Path valueArc;
     valueArc.addArc (centre.x - arcRadius, centre.y - arcRadius, arcRadius * 2.0f, arcRadius * 2.0f,
                      rotaryStartAngle, angle, true);
-    auto valueColour = slider.isEnabled() ? juce::Colour (0xff48c6ff) : juce::Colours::grey;
+    auto valueColour = slider.isEnabled() ? kAccent : juce::Colours::grey;
     g.setColour (valueColour.withAlpha (0.35f));
     g.strokePath (valueArc, juce::PathStrokeType (6.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
     g.setColour (valueColour);
@@ -78,11 +99,11 @@ void AcidSynthAudioProcessorEditor::KnobLookAndFeel::drawRotarySlider (juce::Gra
     auto pointerThickness = 2.4f;
     pointer.addRoundedRectangle (-pointerThickness * 0.5f, -pointerLength, pointerThickness, pointerLength, 1.0f);
 
-    g.setColour (juce::Colour (0xfff3f3f3));
+    g.setColour (kTextPrimary);
     g.fillPath (pointer, juce::AffineTransform::rotation (angle).translated (centre.x, centre.y));
 
     auto capBounds = juce::Rectangle<float> (centre.x - 4.0f, centre.y - 4.0f, 8.0f, 8.0f);
-    g.setColour (juce::Colour (0xffd9d9d9));
+    g.setColour (kTextSecondary);
     g.fillEllipse (capBounds);
 }
 
@@ -108,14 +129,21 @@ void AcidSynthAudioProcessorEditor::KnobLookAndFeel::drawLinearSlider (juce::Gra
     g.setColour (bgColour);
     g.fillRoundedRectangle (track, trackHeight * 0.5f);
 
+    g.setColour (juce::Colours::white.withAlpha (0.06f));
+    g.drawRoundedRectangle (track, trackHeight * 0.5f, 1.0f);
+
     auto filled = track.withWidth (juce::jlimit (0.0f, track.getWidth(), sliderPos - track.getX()));
-    g.setColour (trackColour);
+    juce::ColourGradient fillGradient (trackColour.brighter (0.2f), filled.getX(), filled.getCentreY(),
+                                       kAccentGlow, filled.getRight(), filled.getCentreY(), false);
+    g.setGradientFill (fillGradient);
     g.fillRoundedRectangle (filled, trackHeight * 0.5f);
 
     auto thumbRadius = trackHeight * 0.9f;
     auto thumbCentre = juce::Point<float> (sliderPos, track.getCentreY());
     g.setColour (thumbColour);
     g.fillEllipse (juce::Rectangle<float> (thumbRadius * 2.0f, thumbRadius * 2.0f).withCentre (thumbCentre));
+    g.setColour (juce::Colours::black.withAlpha (0.25f));
+    g.drawEllipse (juce::Rectangle<float> (thumbRadius * 2.0f, thumbRadius * 2.0f).withCentre (thumbCentre), 1.0f);
 }
 
 //==============================================================================
@@ -124,8 +152,8 @@ void AcidSynthAudioProcessorEditor::setupLabel (juce::Label& l, const juce::Stri
 {
     l.setText (text, juce::dontSendNotification);
     l.setJustificationType (juce::Justification::centred);
-    l.setFont (juce::Font (12.0f).withStyle (juce::Font::bold));
-    l.setColour (juce::Label::textColourId, juce::Colours::white.withAlpha (0.90f));
+    l.setFont (juce::Font (juce::FontOptions (11.5f, juce::Font::bold)));
+    l.setColour (juce::Label::textColourId, kTextSecondary);
     l.setInterceptsMouseClicks (false, false);
     addAndMakeVisible (l);
 }
@@ -133,8 +161,8 @@ void AcidSynthAudioProcessorEditor::setupLabel (juce::Label& l, const juce::Stri
 void AcidSynthAudioProcessorEditor::setupValueLabel (juce::Label& l)
 {
     l.setJustificationType (juce::Justification::centred);
-    l.setFont (juce::Font (11.0f).withStyle (juce::Font::plain));
-    l.setColour (juce::Label::textColourId, juce::Colours::white.withAlpha (0.7f));
+    l.setFont (juce::Font (juce::FontOptions (11.0f, juce::Font::plain)));
+    l.setColour (juce::Label::textColourId, kTextMuted);
     l.setInterceptsMouseClicks (false, false);
     addAndMakeVisible (l);
 }
@@ -241,23 +269,29 @@ AcidSynthAudioProcessorEditor::AcidSynthAudioProcessorEditor (AcidSynthAudioProc
 
     for (auto* combo : { &lfo1Mode, &lfo1Sync, &lfo2Mode, &lfo2Sync })
     {
-        combo->setColour (juce::ComboBox::backgroundColourId, juce::Colour (0xff1b1b1b));
-        combo->setColour (juce::ComboBox::textColourId, juce::Colours::white.withAlpha (0.9f));
-        combo->setColour (juce::ComboBox::outlineColourId, juce::Colours::white.withAlpha (0.2f));
+        combo->setColour (juce::ComboBox::backgroundColourId, kControlBg);
+        combo->setColour (juce::ComboBox::textColourId, kTextPrimary);
+        combo->setColour (juce::ComboBox::outlineColourId, kControlEdge);
+        combo->setColour (juce::ComboBox::focusedOutlineColourId, kAccent);
+        combo->setColour (juce::ComboBox::arrowColourId, kTextSecondary);
         addAndMakeVisible (*combo);
     }
 
     for (auto* combo : { &mod1Source, &mod1Dest, &mod2Source, &mod2Dest, &mod3Source, &mod3Dest })
     {
-        combo->setColour (juce::ComboBox::backgroundColourId, juce::Colour (0xff1b1b1b));
-        combo->setColour (juce::ComboBox::textColourId, juce::Colours::white.withAlpha (0.9f));
-        combo->setColour (juce::ComboBox::outlineColourId, juce::Colours::white.withAlpha (0.2f));
+        combo->setColour (juce::ComboBox::backgroundColourId, kControlBg);
+        combo->setColour (juce::ComboBox::textColourId, kTextPrimary);
+        combo->setColour (juce::ComboBox::outlineColourId, kControlEdge);
+        combo->setColour (juce::ComboBox::focusedOutlineColourId, kAccent);
+        combo->setColour (juce::ComboBox::arrowColourId, kTextSecondary);
         addAndMakeVisible (*combo);
     }
 
-    filterChar.setColour (juce::ComboBox::backgroundColourId, juce::Colour (0xff1b1b1b));
-    filterChar.setColour (juce::ComboBox::textColourId, juce::Colours::white.withAlpha (0.9f));
-    filterChar.setColour (juce::ComboBox::outlineColourId, juce::Colours::white.withAlpha (0.2f));
+    filterChar.setColour (juce::ComboBox::backgroundColourId, kControlBg);
+    filterChar.setColour (juce::ComboBox::textColourId, kTextPrimary);
+    filterChar.setColour (juce::ComboBox::outlineColourId, kControlEdge);
+    filterChar.setColour (juce::ComboBox::focusedOutlineColourId, kAccent);
+    filterChar.setColour (juce::ComboBox::arrowColourId, kTextSecondary);
     addAndMakeVisible (filterChar);
 
     auto addModItems = [] (juce::ComboBox& combo, const juce::StringArray& items)
@@ -300,19 +334,25 @@ AcidSynthAudioProcessorEditor::AcidSynthAudioProcessorEditor (AcidSynthAudioProc
 
     // --- Keyboard
     addAndMakeVisible (keyboard);
+    keyboard.setColour (juce::MidiKeyboardComponent::whiteNoteColourId, juce::Colour (0xffe1e6ec));
+    keyboard.setColour (juce::MidiKeyboardComponent::blackNoteColourId, juce::Colour (0xff1a1f25));
+    keyboard.setColour (juce::MidiKeyboardComponent::keySeparatorLineColourId, kPanelEdge);
+    keyboard.setColour (juce::MidiKeyboardComponent::textLabelColourId, kTextMuted);
+    keyboard.setColour (juce::MidiKeyboardComponent::mouseOverKeyOverlayColourId, kAccent.withAlpha (0.18f));
+    keyboard.setColour (juce::MidiKeyboardComponent::keyDownOverlayColourId, kAccent.withAlpha (0.45f));
 
     // --- Top bar labels
     titleLabel.setText ("Acid Ladder VST", juce::dontSendNotification);
     titleLabel.setJustificationType (juce::Justification::centredLeft);
-    titleLabel.setFont (juce::Font (15.0f).withStyle (juce::Font::bold));
-    titleLabel.setColour (juce::Label::textColourId, juce::Colours::white.withAlpha (0.95f));
+    titleLabel.setFont (juce::Font (juce::FontOptions (16.0f, juce::Font::bold)));
+    titleLabel.setColour (juce::Label::textColourId, kTextPrimary);
     titleLabel.setInterceptsMouseClicks (false, false);
     addAndMakeVisible (titleLabel);
 
     readoutLabel.setText ("", juce::dontSendNotification);
     readoutLabel.setJustificationType (juce::Justification::centredRight);
-    readoutLabel.setFont (juce::Font (13.0f).withStyle (juce::Font::plain));
-    readoutLabel.setColour (juce::Label::textColourId, juce::Colours::white.withAlpha (0.85f));
+    readoutLabel.setFont (juce::Font (juce::FontOptions (12.5f, juce::Font::plain)));
+    readoutLabel.setColour (juce::Label::textColourId, kAccentGlow);
     readoutLabel.setInterceptsMouseClicks (false, false);
     addAndMakeVisible (readoutLabel);
 
@@ -325,23 +365,23 @@ AcidSynthAudioProcessorEditor::AcidSynthAudioProcessorEditor (AcidSynthAudioProc
     for (auto* gl : { &groupLeft, &groupMid, &groupRight, &groupExtra })
     {
         gl->setJustificationType (juce::Justification::centred);
-        gl->setFont (juce::Font (11.0f).withStyle (juce::Font::bold));
-        gl->setColour (juce::Label::textColourId, juce::Colours::white.withAlpha (0.55f));
+        gl->setFont (juce::Font (juce::FontOptions (10.5f, juce::Font::bold)));
+        gl->setColour (juce::Label::textColourId, kTextMuted);
         gl->setInterceptsMouseClicks (false, false);
         addAndMakeVisible (*gl);
     }
 
     modHeaderLabel.setText ("MOD MATRIX", juce::dontSendNotification);
     modHeaderLabel.setJustificationType (juce::Justification::centredLeft);
-    modHeaderLabel.setFont (juce::Font (11.0f).withStyle (juce::Font::bold));
-    modHeaderLabel.setColour (juce::Label::textColourId, juce::Colours::white.withAlpha (0.6f));
+    modHeaderLabel.setFont (juce::Font (juce::FontOptions (11.0f, juce::Font::bold)));
+    modHeaderLabel.setColour (juce::Label::textColourId, kTextSecondary);
     modHeaderLabel.setInterceptsMouseClicks (false, false);
     addAndMakeVisible (modHeaderLabel);
 
     fxHeaderLabel.setText ("FX + MOD SOURCES", juce::dontSendNotification);
     fxHeaderLabel.setJustificationType (juce::Justification::centredLeft);
-    fxHeaderLabel.setFont (juce::Font (11.0f).withStyle (juce::Font::bold));
-    fxHeaderLabel.setColour (juce::Label::textColourId, juce::Colours::white.withAlpha (0.6f));
+    fxHeaderLabel.setFont (juce::Font (juce::FontOptions (11.0f, juce::Font::bold)));
+    fxHeaderLabel.setColour (juce::Label::textColourId, kTextSecondary);
     fxHeaderLabel.setInterceptsMouseClicks (false, false);
     addAndMakeVisible (fxHeaderLabel);
 
@@ -352,8 +392,8 @@ AcidSynthAudioProcessorEditor::AcidSynthAudioProcessorEditor (AcidSynthAudioProc
     for (auto* header : { &modSourceHeader, &modAmountHeader, &modDestHeader })
     {
         header->setJustificationType (juce::Justification::centred);
-        header->setFont (juce::Font (10.0f).withStyle (juce::Font::bold));
-        header->setColour (juce::Label::textColourId, juce::Colours::white.withAlpha (0.5f));
+        header->setFont (juce::Font (juce::FontOptions (10.0f, juce::Font::bold)));
+        header->setColour (juce::Label::textColourId, kTextMuted);
         header->setInterceptsMouseClicks (false, false);
         addAndMakeVisible (*header);
     }
@@ -365,8 +405,8 @@ AcidSynthAudioProcessorEditor::AcidSynthAudioProcessorEditor (AcidSynthAudioProc
     for (auto* rowLabel : { &modRow1Label, &modRow2Label, &modRow3Label })
     {
         rowLabel->setJustificationType (juce::Justification::centredLeft);
-        rowLabel->setFont (juce::Font (11.0f).withStyle (juce::Font::bold));
-        rowLabel->setColour (juce::Label::textColourId, juce::Colours::white.withAlpha (0.7f));
+        rowLabel->setFont (juce::Font (juce::FontOptions (10.5f, juce::Font::bold)));
+        rowLabel->setColour (juce::Label::textColourId, kTextSecondary);
         rowLabel->setInterceptsMouseClicks (false, false);
         addAndMakeVisible (*rowLabel);
     }
@@ -566,35 +606,59 @@ AcidSynthAudioProcessorEditor::AcidSynthAudioProcessorEditor (AcidSynthAudioProc
 // Paint: structured panels + subtle separators
 void AcidSynthAudioProcessorEditor::paint (juce::Graphics& g)
 {
-    g.fillAll (juce::Colours::black);
-
     auto bounds = getLocalBounds();
+    auto bgBounds = bounds.toFloat();
+
+    juce::ColourGradient bgGradient (kBgTop, 0.0f, 0.0f, kBgBottom, 0.0f, (float) getHeight(), false);
+    g.setGradientFill (bgGradient);
+    g.fillRect (bgBounds);
 
     // Top bar background
     auto topBar = bounds.removeFromTop (36);
-    g.setColour (juce::Colours::white.withAlpha (0.06f));
+    g.setColour (kPanelBottom);
     g.fillRect (topBar);
 
     // Divider line
-    g.setColour (juce::Colours::white.withAlpha (0.12f));
+    g.setColour (kPanelEdge);
     g.drawLine (0.0f, (float) topBar.getBottom(), (float) getWidth(), (float) topBar.getBottom(), 1.0f);
+    g.setColour (kAccent.withAlpha (0.5f));
+    g.drawLine (0.0f, (float) topBar.getBottom() + 1.0f, (float) getWidth(), (float) topBar.getBottom() + 1.0f, 1.5f);
 
     // Panels
     auto content = bounds.reduced (10);
-    auto keyboardStrip = content.removeFromBottom (100);
-    auto modFxPanel = content.removeFromBottom (240);
+    const int keyboardHeight = juce::jlimit (70, 100, (int) (content.getHeight() * 0.16f));
+    auto keyboardStrip = content.removeFromBottom (keyboardHeight);
+    const int modFxHeight = juce::jlimit (260, 380, (int) (content.getHeight() * 0.45f));
+    auto modFxPanel = content.removeFromBottom (modFxHeight);
     auto knobPanel = content;
 
-    g.setColour (juce::Colours::white.withAlpha (0.05f));
-    g.fillRoundedRectangle (knobPanel.toFloat(), 10.0f);
-    g.fillRoundedRectangle (modFxPanel.toFloat(), 10.0f);
+    auto drawPanel = [&](juce::Rectangle<int> panel)
+    {
+        auto panelF = panel.toFloat();
+        juce::DropShadow shadow (juce::Colours::black.withAlpha (0.35f), 12, { 0, 4 });
+        shadow.drawForRectangle (g, panel);
 
-    g.setColour (juce::Colours::white.withAlpha (0.10f));
-    g.drawRoundedRectangle (knobPanel.toFloat(), 10.0f, 1.0f);
-    g.drawRoundedRectangle (modFxPanel.toFloat(), 10.0f, 1.0f);
+        juce::ColourGradient panelGradient (kPanelTop, panelF.getX(), panelF.getY(),
+                                            kPanelBottom, panelF.getX(), panelF.getBottom(), false);
+        g.setGradientFill (panelGradient);
+        g.fillRoundedRectangle (panelF, kPanelCorner);
+
+        g.setColour (kPanelEdge);
+        g.drawRoundedRectangle (panelF, kPanelCorner, 1.0f);
+
+        g.setColour (juce::Colours::white.withAlpha (0.06f));
+        g.drawRoundedRectangle (panelF.reduced (1.0f), kPanelCorner - 1.0f, 1.0f);
+    };
+
+    drawPanel (knobPanel);
+    drawPanel (modFxPanel);
+
+    auto keyboardPanel = keyboardStrip.reduced (0, 6);
+    if (keyboardPanel.getHeight() > 0)
+        drawPanel (keyboardPanel);
 
     // Keyboard strip divider
-    g.setColour (juce::Colours::white.withAlpha (0.12f));
+    g.setColour (kPanelEdge);
     g.drawLine ((float) keyboardStrip.getX(),
                 (float) keyboardStrip.getY(),
                 (float) keyboardStrip.getRight(),
